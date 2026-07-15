@@ -50,6 +50,7 @@
 - 2026-07-15：USB 啟動檔已整理為唯一正式 `code.py`；7 個舊測試／診斷／備份程式改為 `.bak`，不再混入 `.py` 啟動清單，原檔全部保留。
 - 2026-07-15：R6 重新啟動實測收到 status seq 7／9 及 Soil seq 8 raw 3597；LED 開在第 2 次重試 ACK，LED 關在第 3 次重試 ACK，最後維持關閉。
 - 2026-07-15：板內 `E:\code.py` 與 GitHub 正式源碼 SHA-256 完全相同：`57B9C21DEBF4117E50A6EE7D8314E8D92F7DCA1C134723DB97A4F4072DC7570D`。
+- 2026-07-15：完成 `docs/SECURE_MOTOR_CONTROL_RESEARCH.md`；首選另建 Cloudflare Access＋Tunnel＋Windows USB COM4 Gateway 的 `lwwf-futurelite-actuator-lab`，讓 M1／M2 指令不經公開 MQTT，並加入限時、自動停止、急停及 matching ACK。
 
 ## 部署前閘門
 
