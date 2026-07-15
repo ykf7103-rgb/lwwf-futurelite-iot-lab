@@ -1,0 +1,6 @@
+{
+  "name": "lwwf-futurelite-iot-lab",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-07-14",
+  "send_metrics": false
+}
