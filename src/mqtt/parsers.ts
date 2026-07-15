@@ -69,15 +69,28 @@ const parseSelfTest = (value: Record<string, unknown>): SelfTestMessage => {
 }
 
 export const parseIncoming = (topic: string, payload: string, topics: TopicMap): ParseResult => {
-  if (!Object.values(topics).includes(topic as never)) {
+  const knownTopics: string[] = [
+    topics.status,
+    topics.soil,
+    topics.button,
+    topics.ack,
+    topics.selftest,
+    topics.legacy.soil,
+    topics.legacy.button,
+  ]
+  if (!knownTopics.includes(topic)) {
     return { ok: true, message: { kind: 'unknown' } }
   }
 
   try {
     const value = parseJsonObject(payload)
     if (topic === topics.status) return { ok: true, message: { kind: 'status', value: parseStatus(value) } }
-    if (topic === topics.soil) return { ok: true, message: { kind: 'soil', value: parseSoil(value) } }
-    if (topic === topics.button) return { ok: true, message: { kind: 'button', value: parseButton(value) } }
+    if (topic === topics.soil || topic === topics.legacy.soil) {
+      return { ok: true, message: { kind: 'soil', value: parseSoil(value) } }
+    }
+    if (topic === topics.button || topic === topics.legacy.button) {
+      return { ok: true, message: { kind: 'button', value: parseButton(value) } }
+    }
     if (topic === topics.ack) return { ok: true, message: { kind: 'ack', value: parseAck(value) } }
     if (topic === topics.selftest) {
       return { ok: true, message: { kind: 'selftest', value: parseSelfTest(value) } }

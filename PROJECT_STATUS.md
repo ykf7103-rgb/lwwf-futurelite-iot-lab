@@ -34,6 +34,11 @@
 - 2026-07-15：網站新增「兩端同步」進度、正式板端程式／伴虎提示入口、Soil 0–4095 raw 量尺及 LED 逾時一鍵重試。
 - 2026-07-15：板端參考程式升級為 `2026.07.15-r2`，REPL 會輸出 PUB、RX、ACK、SOIL_ERROR；Soil 讀值直接轉為整數，避免非標準數值型別被靜默略過。
 - 2026-07-15：第二輪正式網址 desktop／390px mobile 8 tests passed；兩端同步入口、Soil raw 量尺、telemetry、LED matching ACK、斷線重連及安全 debug 全部通過。
+- 2026-07-15：第三次現場 Broker 實測只收到 `status` seq 378–383；網站發出的唯一 `cmd/led` 指令亦確實到達 Broker，但主板沒有任何 ACK。
+- 2026-07-15：發現成功的 `status` topic 長度剛好為 32，而失敗的 `cmd/led`、`event/button`、`telemetry/soil` 分別為 33、38、40；這個邊界與現場所有通道結果完全一致。
+- 2026-07-15：正式板端合約改用不超過 32 字元的短 topic：`status`、`soil`、`btn`、`led`、`ack`；網站保留舊 Soil／button topic 接收兼容。
+- 2026-07-15：板端參考程式升級為 `2026.07.15-r3-short-topic`，加入 topic 長度閘門及 status／soil 之間 150ms 發布間隔；伴虎提示改為只作最小局部修正，避免再次重寫整個程式。
+- 2026-07-15：短 topic 版本 `npm run qa` 通過；3 個 Vitest 檔案共 10 tests passed；`npm run qa:visual` desktop／390px mobile 共 8 tests passed。
 
 ## 部署前閘門
 
@@ -45,8 +50,8 @@
 
 ## 現場待完成項目
 
-網站及 MQTT 合約已自動驗收。現場主板仍須在伴虎更新並執行 `03_futurelite_full_console.py`；目前已證實舊板端程式漏發 Soil，亦沒有處理 LED command／ACK，因此尚未聲稱實體 LED 已被網站控制。
+網站及新版短 topic MQTT 合約已自動驗收。現場主板仍須在伴虎把目前正在運行的程式作最小局部修正，然後 Stop 舊程式並重新 Run；在主板 `RX` 增加、實體 LED 改變及網站收到同 ID ACK 前，尚未聲稱現場雙向控制完成。
 
 ## 下一步
 
-在正式網站按「開啟完整板端程式」或把 `docs/PANGHU_FINAL_SYNC_PROMPT.md` 直接貼到伴虎，完整覆蓋並只執行 `03_futurelite_full_console.py`。REPL 必須同時看到 `PUB .../status` 與 `PUB .../telemetry/soil`，網站 LED 指令則要看到 `RX` 及 `ACK`。
+把 `docs/PANGHU_FINAL_SYNC_PROMPT.md` 直接貼到伴虎，只修改現有程式的 topic 常數。REPL 必須列出 status 32、soil 30、btn 29、led 29、ack 29；重新 Run 後網站須收到 `soil`，網站 LED 指令則要令主板 `RX` 增加並回傳同 ID ACK。

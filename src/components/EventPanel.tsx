@@ -21,7 +21,7 @@ export function EventPanel({ counts, lastButton }: EventPanelProps) {
           <p className="eyebrow">實體按鍵事件</p>
           <h2 id="events-title">A／B 事件</h2>
         </div>
-        <span className="live-pill">event/button</span>
+        <span className="live-pill">btn</span>
       </div>
       <div className="button-counters">
         <div className="button-counter button-counter--a">

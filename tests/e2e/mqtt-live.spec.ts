@@ -39,10 +39,10 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
   const harness = await connectHarness()
   try {
     await new Promise<void>((resolve, reject) => {
-      harness.subscribe(`${prefix}/cmd/led`, { qos: 0 }, (error) => (error ? reject(error) : resolve()))
+      harness.subscribe(`${prefix}/led`, { qos: 0 }, (error) => (error ? reject(error) : resolve()))
     })
     harness.on('message', (topic, payload) => {
-      if (topic !== `${prefix}/cmd/led`) return
+      if (topic !== `${prefix}/led`) return
       const command = JSON.parse(payload.toString()) as { id: string; on: boolean }
       harness.publish(
         `${prefix}/ack`,
@@ -62,11 +62,11 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
       await expect(page.getByTestId('diagnostic-summary')).toContainText('Soil 通道沒有資料')
     }
 
-    harness.publish(`${prefix}/telemetry/soil`, JSON.stringify({ raw: 1876, seq: stamp + 1 }), {
+    harness.publish(`${prefix}/soil`, JSON.stringify({ raw: 1876, seq: stamp + 1 }), {
       qos: 0,
       retain: false,
     })
-    harness.publish(`${prefix}/event/button`, JSON.stringify({ button: 'A', seq: stamp + 2 }), {
+    harness.publish(`${prefix}/btn`, JSON.stringify({ button: 'A', seq: stamp + 2 }), {
       qos: 0,
       retain: false,
     })

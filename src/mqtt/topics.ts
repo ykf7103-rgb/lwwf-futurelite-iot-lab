@@ -8,11 +8,17 @@ export const createTopics = (inputPrefix = DEFAULT_TOPIC_PREFIX) => {
     prefix,
     wildcard: `${prefix}/#`,
     status: `${prefix}/status`,
-    soil: `${prefix}/telemetry/soil`,
-    button: `${prefix}/event/button`,
-    ledCommand: `${prefix}/cmd/led`,
+    // FutureLite uwifi only delivered the 32-character status topic during
+    // the field test. Keep every board-facing topic at or below 32 chars.
+    soil: `${prefix}/soil`,
+    button: `${prefix}/btn`,
+    ledCommand: `${prefix}/led`,
     ack: `${prefix}/ack`,
     selftest: `${prefix}/web/selftest`,
+    legacy: {
+      soil: `${prefix}/telemetry/soil`,
+      button: `${prefix}/event/button`,
+    },
   } as const
 }
 

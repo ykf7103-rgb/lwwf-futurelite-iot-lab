@@ -67,14 +67,14 @@ export function DeviceDiagnostics({
       return {
         tone: 'error' as HealthTone,
         title: '主板在線，但 Soil 通道沒有資料',
-        body: '板端目前只發出 status；必須每約兩秒另外發布 telemetry/soil JSON。',
+        body: '板端目前只發出 status；必須每約兩秒另外發布短 topic「soil」JSON。',
       }
     }
     if (ackMissing) {
       return {
         tone: 'error' as HealthTone,
         title: '感測資料正常，但 LED 沒有回覆 ACK',
-        body: '請檢查板端有否訂閱 cmd/led、執行 P2 指令，並用相同 command ID 發布 ack。',
+        body: '請檢查板端有否訂閱短 topic「led」、執行 P2 指令，並用相同 command ID 發布 ack。',
       }
     }
     return {
@@ -108,7 +108,7 @@ export function DeviceDiagnostics({
         <article className={`channel-card channel-card--${channels.soil.count ? 'ok' : deviceOnline ? 'error' : 'idle'}`}>
           <div><span>02</span><strong>Soil P1</strong></div>
           <b>{channels.soil.count ? '原始數值正常' : '未收到資料'}</b>
-          <small>{metricDetail(channels.soil, '需要 telemetry/soil')}</small>
+          <small>{metricDetail(channels.soil, '需要短 topic soil')}</small>
           <code>{'{"raw":3589,"seq":124}'}</code>
         </article>
 

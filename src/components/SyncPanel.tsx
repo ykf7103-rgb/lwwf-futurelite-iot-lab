@@ -46,12 +46,12 @@ export function SyncPanel({ deviceOnline, channels, command }: SyncPanelProps) {
         </li>
         <li className={`sync-step ${soilReady ? 'sync-step--ok' : 'sync-step--error'}`}>
           <span>3</span>
-          <div><strong>Soil P1</strong><small>telemetry/soil raw</small></div>
+          <div><strong>Soil P1</strong><small>短 topic soil · raw</small></div>
           <b>{soilReady ? '正常' : '缺失'}</b>
         </li>
         <li className={`sync-step ${ackReady ? 'sync-step--ok' : command.status === 'timeout' ? 'sync-step--error' : ''}`}>
           <span>4</span>
-          <div><strong>LED P2 回覆</strong><small>cmd/led → matching ACK</small></div>
+          <div><strong>LED P2 回覆</strong><small>短 topic led → matching ACK</small></div>
           <b>{ackReady ? '正常' : command.status === 'timeout' ? '逾時' : '待測'}</b>
         </li>
       </ol>

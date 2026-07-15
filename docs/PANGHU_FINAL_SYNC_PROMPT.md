@@ -1,85 +1,83 @@
-# 伴虎最終同步提示
+# 伴虎最終同步提示（r3 短 Topic 修正版）
 
-把以下整段直接貼到 FutureLite 伴虎：
+把以下整段直接貼到 FutureLite 伴虎。這次只修正目前已在運行的程式，不讓 AI 重新設計整個程式。
 
 ```text
-請修正現有 03_futurelite_full_console.py，完成網站與 FutureLite 的最終同步版本。
+請打開板上目前正在運行、畫面顯示 LIVE MONITOR 的 Python 程式，先讀取完整原始碼，再作「最小局部修正」。
 
-唯一正式參考程式：
-https://raw.githubusercontent.com/ykf7103-rgb/lwwf-futurelite-iot-lab/main/device/03_futurelite_full_console.py
+重要：不要重寫整個程式，不要建立另一個版本，不要改動已成功的 Wi-Fi、MQTT 連線、P1 Soil、P2 LED、M2 風扇、A/B/M 按鍵或屏幕功能。只修改 MQTT topic 常數、兩次 publish 的間隔及 topic 長度檢查。
 
-如果伴虎可以讀取網址，請直接以這個網址的完整內容覆蓋板上的 03_futurelite_full_console.py，不要自行刪減。若不能讀取網址，才按以下規格完整重建。
+外部 Broker 已實測：
+- 32 字元的 hksteam/demo/fla-7q4m9c2p/status 可以成功發布。
+- 33 字元的舊 LED command、38 字元的舊 button、40 字元的舊 soil 全部沒有到達主板或 Broker。
+- 主板畫面 Soil P1 有數值，證明感測器正常。
+- 主板 RX 一直是 0，證明舊 LED command 沒有被主板收到。
 
-目前已由外部 MQTT 監聽確認：
-- status 每約兩秒正常發布
-- A／B event 曾經正常發布
-- telemetry/soil 完全沒有發布
-- 網站發布 cmd/led 後，FutureLite 沒有回傳 ack
-- mqttConnect() 成功時回傳 NoneType；不可用回傳值判斷成敗
+固定 Prefix（不可更改）：
+hksteam/demo/fla-7q4m9c2p
 
-請先讀取現有已成功的 WiFi／DNS／TCP1883／MQTT／SUB／PUB 診斷程式，以及現有 03_futurelite_full_console.py。沿用已成功 API，然後完整取代 03_futurelite_full_console.py 的主迴圈。不要修改 boot.py、main.py、wifi.txt、lib 或其他程式。
+請逐字改成以下正式短 topic：
+- TOPIC_STATUS = PREFIX + "/status"
+- TOPIC_SOIL = PREFIX + "/soil"
+- TOPIC_BUTTON = PREFIX + "/btn"
+- TOPIC_LED_COMMAND = PREFIX + "/led"
+- TOPIC_ACK = PREFIX + "/ack"
 
-固定設定：
-- Broker：broker.emqx.io，TCP 1883，帳戶及密碼留空
-- Prefix：hksteam/demo/fla-7q4m9c2p
-- status：hksteam/demo/fla-7q4m9c2p/status
-- soil：hksteam/demo/fla-7q4m9c2p/telemetry/soil
-- button：hksteam/demo/fla-7q4m9c2p/event/button
-- LED command：hksteam/demo/fla-7q4m9c2p/cmd/led
-- ACK：hksteam/demo/fla-7q4m9c2p/ack
+必須刪除／取代程式內所有以下舊 topic 字串，不可再用：
+- /telemetry/soil
+- /event/button
+- /cmd/led
 
-必須使用同一個 WIFI() 物件完成 mqttConnect、subscribe、getMessage 和 publish。
+必須保留以下完整雙向邏輯：
+1. 使用同一個 WIFI() 物件執行 mqttConnect、subscribe、getMessage、publish。
+2. mqttConnect 成功但回傳 None 是正常；只以有沒有 Exception 判斷。
+3. 連線後執行 wifi.subscribe(TOPIC_LED_COMMAND)。
+4. 永久主迴圈非阻塞執行 wifi.getMessage(TOPIC_LED_COMMAND)。
+5. 每約兩秒 publish status，然後 time.sleep(0.15)，再 publish soil。
+6. Soil payload：{"raw":P1實際整數值,"seq":遞增整數}。
+7. A/B payload：{"button":"A或B","seq":遞增整數}。
+8. 收到 LED payload：{"id":"...","on":true或false} 後，實際控制 P2。
+9. 完成後 publish ACK：{"id":"原本相同id","ok":true,"on":實際狀態}。
+10. Wi-Fi／MQTT 重連後必須重新 subscribe。
 
-硬件：
-- P1：MeowPin('P1','ANALOG')，使用 getAnalog() 讀取 Soil raw
-- P2：MeowPin('P2','OUT')，LED
-- M2：Motor()，只由實體 B 鍵本機開關，速度 50
-- A：本機切換 P2 LED，並發布 A event
-- B：本機切換 M2 風扇，並發布 B event
-- M：切換三頁屏幕，不發布 MQTT
+在 mqttConnect 成功後加入以下靜態檢查；任何板端 topic 超過 32 字元便停止並清楚報錯：
 
-永久主迴圈必須同時執行：
-1. 每約兩秒發布 {"online":true,"seq":數字}
-2. 每約兩秒另外發布 {"raw":P1原始數值,"seq":數字}
-3. 非阻塞檢查 cmd/led
-4. 收到 {"id":"...","on":true或false} 後控制 P2
-5. 必須用完全相同 id 發布 {"id":"...","ok":true,"on":true或false}
-6. 同一 id 不可重複控制，但可以再次回覆相同 ACK
-7. getMessage() 回傳 None 只代表暫時沒有新指令
-8. 主迴圈 sleep 50～100ms，不可因等待指令停止 Soil 上報
-9. WiFi／MQTT 異常後停止 M2、等待三秒、重新連線及重新 subscribe
+for topic in (TOPIC_STATUS, TOPIC_SOIL, TOPIC_BUTTON, TOPIC_LED_COMMAND, TOPIC_ACK):
+    print("TOPIC", len(topic), topic)
+    if len(topic) > 32:
+        raise ValueError("topic too long: " + topic)
 
-屏幕三頁：
-- 即時監控：WiFi、MQTT、Soil P1、LED P2、FAN M2、A/B 次數、seq、RX/TX
-- 連線診斷：WiFi、DNS、TCP1883、MQTT、SUB、PUB、重連次數、最後錯誤
-- 網站指令：最後 LED ON/OFF、command ID 最後八字、ACK、RX/TX、多久前
+硬件及安全設定保持不變：
+- P1：Soil raw，只顯示原始值，不轉百分比。
+- P2：LED，可由實體 A 及網站控制。
+- M2：風扇只由實體 B 鍵本機控制；不可新增 cmd/fan，不可透過公共 MQTT 遙控。
+- 程式停止、網絡錯誤或重連時，M2 必須 OFF。
+- 不讀取、顯示或傳送 SSID、密碼、IP、Token、API key 或裝置憑證。
+- 不修改 boot.py、main.py、wifi.txt、lib 或任何系統檔案。
 
-安全要求：
-- M2 開機預設 OFF，網絡錯誤或程式停止時立即 OFF
-- 不建立 cmd/fan，不讓公開網站遙控風扇，不發布風扇狀態
-- 不讀取、顯示或傳送 SSID、密碼、IP、Token 或裝置憑證
-- Soil 必須保持 raw，不可換算百分比
-
-完成前請自行靜態檢查以下條件確實存在於程式：
+完成後先做靜態檢查，確認程式內確實有：
 - publish(TOPIC_STATUS, ...)
 - publish(TOPIC_SOIL, ...)
 - subscribe(TOPIC_LED_COMMAND)
 - getMessage(TOPIC_LED_COMMAND)
 - publish(TOPIC_ACK, ...)
+- 所有板端 topic 長度不超過 32
 - ACK 使用收到的相同 command id
 - 永久 while 迴圈
-- REPL 必須每約兩秒看到一則 PUB status 及一則 PUB telemetry/soil
-- 收到網站指令時必須看到 RX cmd/led 及 ACK 記錄
 
-只儲存 03_futurelite_full_console.py，不要自動執行。完成後回覆：
-「03_futurelite_full_console.py 已同步 Soil 與 LED ACK，請手動執行。」
+只儲存原本正在運行的 Python 檔案，不要自動 Run。完成後只回覆：
+「短 topic 修正已儲存，請手動 Stop 舊程式後再 Run。」
 ```
 
-## 現場驗收
+## 現場操作及驗收
 
-1. 只執行 `03_futurelite_full_console.py`。
-2. 首頁 `Seq` 應持續增加，Soil P1 不可顯示 `--`。
-3. 網站在六秒內顯示主板在線及 Soil 原始數值。
-4. A／B 各按一次，網站計數各增加一次。
-5. 網站按 LED 開及 LED 關，P2 實體燈改變，網站顯示「硬件已確認」。
-6. M2 風扇只以 B 鍵本機測試。
+1. 在伴虎先按 Stop，確認舊程式停止。
+2. 儲存修正檔，重新 Run；不要同時運行兩個 MQTT 程式。
+3. REPL 必須列出：status 32、soil 30、btn 29、led 29、ack 29。
+4. 正式網站在六秒內顯示 Soil raw。
+5. 按 A／B 各一次，網站計數各增加一次。
+6. 網站按 LED 開／關；主板 `RX` 必須增加，P2 實體燈改變，網站收到相同 ID 的 ACK。
+7. M2 風扇只以 B 鍵在現場測試。
+
+唯一正式參考程式：
+`https://raw.githubusercontent.com/ykf7103-rgb/lwwf-futurelite-iot-lab/main/device/03_futurelite_full_console.py`

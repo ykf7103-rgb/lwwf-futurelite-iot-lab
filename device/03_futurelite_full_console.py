@@ -25,9 +25,9 @@ BROKER = "broker.emqx.io"
 MQTT_PORT = 1883
 PREFIX = "hksteam/demo/fla-7q4m9c2p"
 TOPIC_STATUS = PREFIX + "/status"
-TOPIC_SOIL = PREFIX + "/telemetry/soil"
-TOPIC_BUTTON = PREFIX + "/event/button"
-TOPIC_LED_COMMAND = PREFIX + "/cmd/led"
+TOPIC_SOIL = PREFIX + "/soil"
+TOPIC_BUTTON = PREFIX + "/btn"
+TOPIC_LED_COMMAND = PREFIX + "/led"
 TOPIC_ACK = PREFIX + "/ack"
 
 PUBLISH_INTERVAL = 2.0
@@ -35,7 +35,7 @@ DISPLAY_INTERVAL = 0.35
 DEBOUNCE_SECONDS = 0.25
 RETRY_SECONDS = 3
 FAN_SPEED = 50
-PROGRAM_VERSION = "2026.07.15-r2"
+PROGRAM_VERSION = "2026.07.15-r3-short-topic"
 
 BLACK = (0, 0, 0)
 WHITE = (245, 250, 255)
@@ -245,6 +245,9 @@ def connect_mqtt():
     wifi.mqttConnect(BROKER, client_id, "", "")
     # mqttConnect succeeds with a None return value; no exception means success.
     mqtt_ok = True
+    for topic in (TOPIC_STATUS, TOPIC_SOIL, TOPIC_BUTTON, TOPIC_LED_COMMAND, TOPIC_ACK):
+        if len(topic) > 32:
+            raise ValueError("topic too long: " + topic)
     wifi.subscribe(TOPIC_LED_COMMAND)
     sub_ok = True
     last_error = ""
@@ -348,6 +351,9 @@ def render():
 
 def publish_live_data():
     publish_json(TOPIC_STATUS, {"online": True, "seq": next_seq()})
+    # The board uwifi transport is more reliable when two publishes are not
+    # issued in the same instant.
+    time.sleep(0.15)
     if soil_raw is None:
         read_soil()
     if soil_raw is not None:

@@ -74,7 +74,7 @@ export function CommandPanel({ brokerStatus, deviceOnline, command, onSend }: Co
       {(command.status === 'timeout' || command.status === 'failed') && (
         <div className="command-recovery" role="note">
           <strong>板端修復重點</strong>
-          <p>訂閱 cmd/led → 讀取 JSON → 控制 P2 → 用相同 ID 發布 ack。</p>
+          <p>訂閱短 topic「led」→ 讀取 JSON → 控制 P2 → 用相同 ID 發布 ack。</p>
           {retryOn !== undefined && (
             <button
               className="button button--ghost button--small"

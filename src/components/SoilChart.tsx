@@ -68,7 +68,7 @@ export function SoilChart({ samples, deviceOnline, lastAt }: SoilChartProps) {
             <strong>{deviceOnline ? '主板在線，但 Soil 通道沒有資料' : '等待 FutureLite 傳送 Soil raw'}</strong>
             <p>
               {deviceOnline
-                ? '板端必須另外發布 telemetry/soil；status 心跳不會自動帶入 Soil 數值。'
+                ? '板端必須另外發布短 topic「soil」；status 心跳不會自動帶入 Soil 數值。'
                 : '啟動常駐 Bridge 後，網站會在這裡顯示 P1 原始讀數。'}
             </p>
             <code>{'{"raw":3589,"seq":123}'}</code>

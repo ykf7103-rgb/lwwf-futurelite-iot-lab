@@ -6,7 +6,7 @@
 
 - `npm run lint`：通過。
 - `npm run typecheck`：通過。
-- Vitest：3 個測試檔案，8 tests passed。
+- Vitest：3 個測試檔案，10 tests passed，包括所有板端 topic 不超過 32 字元及舊 telemetry topic 接收兼容。
 - Vite production build：通過。
 - npm audit：0 vulnerabilities。
 - Premium tool audit：Ready for premium claim；docs、debug、gates 均齊備。
@@ -25,16 +25,26 @@
 - 發出唯一 ID 的 LED 開及 LED 關指令後，八秒內沒有收到任何 `ack`。
 - 結論：網站接收及顯示邏輯正常；目前缺口在板端常駐程式沒有 Soil publish，亦沒有完成 cmd/led → P2 → matching ACK。
 - 第二次 12 秒監聽仍只收到 5 則 `status`（seq 116–120），再次確認現場未執行正式完整板端版本。
+- 第三次 15 秒監聽 `hksteam/#` 只收到 6 則 `hksteam/demo/fla-7q4m9c2p/status`（seq 378–383），沒有 Soil、button 或 ACK。
+- 獨立 MQTT client 發出 `hksteam/demo/fla-7q4m9c2p/cmd/led` 後，Broker 即時回見該指令，但八秒內主板沒有 ACK；證明網站／Broker 發送路徑正常，主板訂閱沒有收到舊長 topic。
+- Topic 長度對照：成功 status 32；失敗 cmd/led 33、event/button 38、telemetry/soil 40。新版正式合約已改為 soil 30、btn 29、led 29，ack 29。
 
 ## 界線
 
-自動 MQTT harness 驗證網站與公開 Broker 的完整訊息合約。實體 FutureLite 現場監聽已證實心跳正常，但 Soil 及 LED ACK 尚待伴虎程式更新後再驗收。
+自動 MQTT harness 已用短 topic 驗證網站與公開 Broker 的完整訊息合約。實體 FutureLite 現場監聽已證實心跳正常，但 Soil 及 LED ACK 尚待伴虎把板端改成短 topic 後再驗收。
 
 ## 待執行
 
-- 在伴虎更新並執行 `03_futurelite_full_console.py`。
+- 在伴虎按 `PANGHU_FINAL_SYNC_PROMPT.md` 只修改現有程式的 topic 常數，Stop 後重新 Run。
 - 確認網站收到 P1 raw、A／B 各一次，以及連續 10 組 LED 開／關 matching ACK。
 - M2 只以 B 鍵本機測試，網站不提供風扇／馬達控制。
+
+## 2026-07-15 短 Topic 回歸測試
+
+- `npm run qa`：通過；lint、typecheck、10 unit tests、production build 全部成功。
+- `npm run qa:visual`：desktop Chromium 4 tests、390px mobile Chromium 4 tests，合共 8 passed。
+- 真實公開 Broker harness：短 `soil`、`btn`、`led`、`ack` 全流程成功。
+- UI：桌面及手機沒有 console error、page error、橫向溢出或文字重疊。
 
 ## 正式部署驗證
 

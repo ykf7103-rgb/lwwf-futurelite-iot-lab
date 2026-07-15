@@ -44,4 +44,15 @@ describe('runtime MQTT parser', () => {
       message: { kind: 'unknown' },
     })
   })
+
+  it('accepts legacy long telemetry topics during migration', () => {
+    expect(parseIncoming(topics.legacy.soil, '{"raw":2048,"seq":4}', topics)).toEqual({
+      ok: true,
+      message: { kind: 'soil', value: { raw: 2048, seq: 4 } },
+    })
+    expect(parseIncoming(topics.legacy.button, '{"button":"B","seq":5}', topics)).toEqual({
+      ok: true,
+      message: { kind: 'button', value: { button: 'B', seq: 5 } },
+    })
+  })
 })
