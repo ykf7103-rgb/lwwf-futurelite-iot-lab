@@ -44,6 +44,8 @@
 - 2026-07-15：實機根因確認為 `getMessage()` 缺少指定 `led` topic，以及 status／Soil 緊接發布時第二則 QoS 0 訊息容易遺失；板內現正執行 `USB-R5`，改為每秒輪流發布一則 status 或 Soil。
 - 2026-07-15：公開 Broker 實機驗收成功：連續收到 `USB-R5` status seq 221／223／225、Soil raw 3588／3625，LED 開及 LED 關均在相同 command ID 第二次發送時收到 matching ACK，最後狀態為 LED 關。
 - 2026-07-15：網站加入同 command ID 每秒自動重試、5 秒 ACK 上限；本機 `npm run qa` 通過 10 tests，`npm run qa:visual` desktop／390px mobile 共 8 tests passed，測試會刻意忽略首個 LED 指令以驗證重試。
+- 2026-07-15：Cloudflare Pages production deployment `bd361091-0a6f-4e79-8b79-42232e298f9b` 完成，來源 commit `c068674`，正式網址 HTTP 200。
+- 2026-07-15：USB-R5 正式網址 desktop／390px mobile 共 8 tests passed；即時 MQTT、Soil raw、LED matching ACK、Broker 自我測試、斷線重連、console、debug 及 overflow 全部通過。
 
 ## 部署前閘門
 

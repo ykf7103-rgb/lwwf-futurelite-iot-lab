@@ -46,8 +46,9 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
       if (topic !== `${prefix}/led`) return
       const command = JSON.parse(payload.toString()) as { id: string; on: boolean }
       receivedCommands.push(command)
-      // 故意忽略第一個 QoS 0 指令，驗證網站會以相同 command ID 自動重試。
-      if (receivedCommands.length === 1) return
+      // 本機 QA 故意忽略第一個 QoS 0 指令，驗證網站會以相同 command ID
+      // 自動重試。正式網址可能同時有實體主板回覆，故不模擬漏訊息。
+      if (!process.env.BASE_URL && receivedCommands.length === 1) return
       harness.publish(
         `${prefix}/ack`,
         JSON.stringify({ id: command.id, ok: true, on: command.on }),
@@ -81,8 +82,10 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
 
     await page.getByRole('button', { name: 'LED 開' }).click()
     await expect(page.getByTestId('command-status')).toContainText('硬件已確認', { timeout: 10_000 })
-    expect(receivedCommands.length).toBeGreaterThanOrEqual(2)
-    expect(new Set(receivedCommands.map(({ id }) => id)).size).toBe(1)
+    if (!process.env.BASE_URL) {
+      expect(receivedCommands.length).toBeGreaterThanOrEqual(2)
+      expect(new Set(receivedCommands.map(({ id }) => id)).size).toBe(1)
+    }
 
     await expect(page.getByTestId('diagnostic-summary')).toContainText('即時通道已建立')
   } finally {
