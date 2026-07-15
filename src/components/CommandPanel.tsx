@@ -2,6 +2,7 @@ import type { BrokerStatus, CommandState } from '../mqtt/types'
 
 interface CommandPanelProps {
   brokerStatus: BrokerStatus
+  deviceOnline: boolean
   command: CommandState
   onSend: (on: boolean) => void
 }
@@ -25,9 +26,9 @@ const statusText = (command: CommandState) => {
   return '尚未發出指令'
 }
 
-export function CommandPanel({ brokerStatus, command, onSend }: CommandPanelProps) {
+export function CommandPanel({ brokerStatus, deviceOnline, command, onSend }: CommandPanelProps) {
   const busy = command.status === 'waiting'
-  const disabled = brokerStatus !== 'connected' || busy
+  const disabled = brokerStatus !== 'connected' || !deviceOnline || busy
   const hasDetails = command.status !== 'idle'
   const ackTime = command.status === 'acknowledged' || command.status === 'failed' ? command.ackAt : undefined
   const latency = command.status === 'acknowledged' || command.status === 'failed' ? command.latency : undefined
@@ -39,7 +40,9 @@ export function CommandPanel({ brokerStatus, command, onSend }: CommandPanelProp
           <p className="eyebrow">Port2 · P2</p>
           <h2 id="command-title">LED 雙向控制</h2>
         </div>
-        <span className="live-pill">cmd/led → ack</span>
+        <span className={`live-pill ${deviceOnline ? 'live-pill--ready' : ''}`}>
+          {deviceOnline ? '主板在線 · 可發送' : '等待主板在線'}
+        </span>
       </div>
       <div className="command-buttons">
         <button
@@ -67,6 +70,13 @@ export function CommandPanel({ brokerStatus, command, onSend }: CommandPanelProp
         <strong>{statusText(command)}</strong>
       </div>
 
+      {(command.status === 'timeout' || command.status === 'failed') && (
+        <div className="command-recovery" role="note">
+          <strong>板端修復重點</strong>
+          <p>訂閱 cmd/led → 讀取 JSON → 控制 P2 → 用相同 ID 發布 ack。</p>
+        </div>
+      )}
+
       <dl className="command-details">
         <div>
           <dt>Command ID</dt>
@@ -85,7 +95,11 @@ export function CommandPanel({ brokerStatus, command, onSend }: CommandPanelProp
           <dd>{latency === undefined ? '—' : `${latency} ms`}</dd>
         </div>
       </dl>
-      <p className="panel-note">只有實體 LED 改變並回傳相同 command ID 的 ACK，才算完成。</p>
+      <p className="panel-note">
+        {deviceOnline
+          ? '只有實體 LED 改變並回傳相同 command ID 的 ACK，才算完成。'
+          : '按鈕會在主板在線後啟用，避免把「成功發布」誤當成硬件已執行。'}
+      </p>
     </section>
   )
 }

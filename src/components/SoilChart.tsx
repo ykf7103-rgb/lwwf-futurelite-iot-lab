@@ -2,13 +2,25 @@ import type { SoilMessage } from '../mqtt/types'
 
 interface SoilChartProps {
   samples: SoilMessage[]
+  deviceOnline: boolean
+  lastAt: number | null
 }
 
 const WIDTH = 720
 const HEIGHT = 250
 const PAD = 26
 
-export function SoilChart({ samples }: SoilChartProps) {
+const formatTime = (value: number | null) =>
+  value
+    ? new Intl.DateTimeFormat('zh-HK', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }).format(value)
+    : '—'
+
+export function SoilChart({ samples, deviceOnline, lastAt }: SoilChartProps) {
   const latest = samples.at(-1)?.raw ?? null
   const values = samples.map((sample) => sample.raw)
   const min = values.length ? Math.min(...values) : 0
@@ -39,9 +51,15 @@ export function SoilChart({ samples }: SoilChartProps) {
 
       <div className="chart-wrap">
         {samples.length < 2 ? (
-          <div className="empty-state">
+          <div className={`empty-state ${deviceOnline && samples.length === 0 ? 'empty-state--alert' : ''}`}>
             <span aria-hidden="true">⌁</span>
-            <p>等待 FutureLite 傳送 Soil raw 訊息</p>
+            <strong>{deviceOnline ? '主板在線，但 Soil 通道沒有資料' : '等待 FutureLite 傳送 Soil raw'}</strong>
+            <p>
+              {deviceOnline
+                ? '板端必須另外發布 telemetry/soil；status 心跳不會自動帶入 Soil 數值。'
+                : '啟動常駐 Bridge 後，網站會在這裡顯示 P1 原始讀數。'}
+            </p>
+            <code>{'{"raw":3589,"seq":123}'}</code>
           </div>
         ) : (
           <svg
@@ -73,7 +91,10 @@ export function SoilChart({ samples }: SoilChartProps) {
           <span>最低 {values.length ? min : '—'}</span>
         </div>
       </div>
-      <p className="panel-note">raw 是感測器原始讀數，未經實測校準前不會換算成百分比。</p>
+      <div className="panel-note panel-note--split">
+        <span>raw 是感測器原始讀數，未經實測校準前不會換算成百分比。</span>
+        <span>最後 Soil：{formatTime(lastAt)}</span>
+      </div>
     </section>
   )
 }

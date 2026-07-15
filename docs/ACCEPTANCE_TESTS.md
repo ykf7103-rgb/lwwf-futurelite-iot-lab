@@ -11,3 +11,6 @@
 9. 手動斷線及重連正常；卸載時 unsubscribe 並 end client。
 10. 桌面及 390px 手機沒有重疊、破圖或橫向溢出。
 11. debug contract 不含敏感資料。
+12. 主板只有 status 而沒有 soil 時，介面明確顯示「主板在線，但 Soil 通道沒有資料」。
+13. LED 指令逾時後顯示板端 subscribe／ACK 修復提示。
+14. 本機 Playwright 使用獨立 QA topic，避免現場主板或並行測試污染結果。

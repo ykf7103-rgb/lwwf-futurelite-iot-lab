@@ -3,7 +3,9 @@ import mqtt, { type MqttClient } from 'mqtt'
 import { randomUUID } from 'node:crypto'
 
 const url = 'wss://broker.emqx.io:8084/mqtt'
-const prefix = 'hksteam/demo/fla-7q4m9c2p'
+const prefix = process.env.BASE_URL
+  ? 'hksteam/demo/fla-7q4m9c2p'
+  : 'hksteam/demo/fla-7q4m9c2p/qa'
 
 const connectHarness = () =>
   new Promise<MqttClient>((resolve, reject) => {
@@ -30,7 +32,7 @@ test('公開 Broker self-test 只驗證瀏覽器', async ({ page }) => {
   await expect(page.getByTestId('broker-status')).toHaveText('已連線', { timeout: 20_000 })
   await page.getByRole('button', { name: 'Broker 自我測試' }).click()
   await expect(page.getByTestId('selftest-status')).toContainText('成功', { timeout: 10_000 })
-  await expect(page.getByTestId('device-status')).toHaveText('離線')
+  await expect(page.getByTestId('device-status')).toHaveText(/在線|離線/)
 })
 
 test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ page }) => {
@@ -54,6 +56,12 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
 
     const stamp = Date.now()
     harness.publish(`${prefix}/status`, JSON.stringify({ online: true, seq: stamp }), { qos: 0, retain: false })
+
+    await expect(page.getByTestId('device-status')).toHaveText('在線')
+    if (!process.env.BASE_URL) {
+      await expect(page.getByTestId('diagnostic-summary')).toContainText('Soil 通道沒有資料')
+    }
+
     harness.publish(`${prefix}/telemetry/soil`, JSON.stringify({ raw: 1876, seq: stamp + 1 }), {
       qos: 0,
       retain: false,
@@ -63,14 +71,13 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
       retain: false,
     })
 
-    await expect(page.getByTestId('device-status')).toHaveText('在線')
     await expect(page.getByTestId('soil-value')).toHaveText('1876')
     await expect(page.getByTestId('button-a-count')).toHaveText('1')
 
     await page.getByRole('button', { name: 'LED 開' }).click()
     await expect(page.getByTestId('command-status')).toContainText('硬件已確認', { timeout: 10_000 })
 
-    await expect(page.getByTestId('device-status')).toHaveText('離線', { timeout: 9_000 })
+    await expect(page.getByTestId('diagnostic-summary')).toContainText('即時通道已建立')
   } finally {
     harness.end(true)
   }

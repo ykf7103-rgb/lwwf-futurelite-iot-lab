@@ -37,6 +37,19 @@ export interface SelfTestMessage {
   sentAt: number
 }
 
+export interface ChannelMetric {
+  count: number
+  lastAt: number | null
+  lastSeq?: number
+}
+
+export interface ChannelMetrics {
+  status: ChannelMetric
+  soil: ChannelMetric
+  button: ChannelMetric
+  ack: ChannelMetric
+}
+
 export type LogDirection = 'in' | 'out' | 'system'
 
 export interface RawLogEntry {

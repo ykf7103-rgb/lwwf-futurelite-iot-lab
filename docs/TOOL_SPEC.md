@@ -13,6 +13,8 @@
 - LED 開／關指令與 matching ACK 詳情
 - Broker self-test
 - 可摺疊原始 MQTT log
+- 四通道健康檢查：status、Soil、A／B event、LED ACK
+- 現場硬件配置：P1 Soil、P2 LED、M2 風扇本機模式
 
 ## 失敗狀態
 
@@ -22,3 +24,5 @@
 - 非 matching ACK
 - 指令 5 秒逾時
 - self-test 5 秒逾時
+- 主板在線但 Soil 通道沒有資料
+- LED 指令已發布但板端沒有 matching ACK

@@ -1,11 +1,11 @@
 # PROJECT STATUS
 
-更新日期：2026-07-14
+更新日期：2026-07-15
 
 ## 專案識別
 
 - Site ID：`lwwf-futurelite-iot-lab`
-- 顯示名稱：FutureLite AI 雙向 MQTT 測試台
+- 顯示名稱：FutureLite AI IoT 現場監控與控制中心
 - 對象：教師及 STEAM／電腦科課堂硬件測試
 - 本機源碼：`D:\Google drive sync with T7 Shield\LWWF\Claude code\FUTURE LITE`
 - 部署方式：Cloudflare Pages 靜態部署
@@ -22,6 +22,13 @@
 - 2026-07-14：Premium tool audit：Ready；npm audit：0 vulnerabilities。
 - 2026-07-14：Cloudflare Pages production deployment `9ad7ab1a-c724-4587-84c3-d6da431338b3` 完成，HTTP 200。
 - 2026-07-14：正式網址 Playwright desktop／390px mobile 共 8 tests passed；live Broker self-test、telemetry、A 鍵、matching ACK、6 秒離線及斷線重連全部通過。
+- 2026-07-15：現場 MQTT 監聽確認 FutureLite 每約兩秒只發布 `status`（seq 118–122），沒有 `telemetry/soil`；發出 LED 開／關測試後亦沒有收到 `ack`。網站舊版顯示在線並非 Soil 或 LED 已完成。
+- 2026-07-15：網站重構為四通道診斷介面，分開顯示 status、Soil、A／B event 及 LED ACK，並加入預期 JSON、硬件配置及板端修復提示。
+- 2026-07-15：LED 按鈕只在主板在線時啟用；M2 清楚標示為 B 鍵本機控制，不提供公共網站遙控。
+- 2026-07-15：新增 `device/03_futurelite_full_console.py` 參考程式及 `docs/PANGHU_FINAL_SYNC_PROMPT.md`，統一 P1 Soil、P2 LED、M2 本機風扇與 MQTT 合約。
+- 2026-07-15：`npm run qa` 通過；Vitest 8 tests passed；`npm run qa:visual` 桌面及 390px 手機 8 tests passed，沒有 console error、page error、橫向溢出或文字重疊。
+- 2026-07-15：本機 Playwright 改用獨立 QA topic，避免現場主板及桌面／手機並行測試互相污染。
+- 2026-07-15：Cloudflare Pages production deployment `e6efa9c4-44cc-41a2-9c35-8ef3622d131f` 完成，正式網址已更新。
 
 ## 部署前閘門
 
@@ -31,10 +38,10 @@
 - 正式網址桌面及 390px 手機檢查
 - Broker self-test（外部網絡容許時）
 
-## 現場唯一未代測項目
+## 現場待完成項目
 
-實體 FutureLite、Soil、LED 及胖虎板端程式須由使用者按 Word 指引在現場執行。本輪已完成網站及 Broker 端的自動驗收，但沒有聲稱實體 LED 已被遠端控制。
+網站及 MQTT 合約已自動驗收。現場主板仍須在伴虎更新並執行 `03_futurelite_full_console.py`；目前已證實舊板端程式漏發 Soil，亦沒有處理 LED command／ACK，因此尚未聲稱實體 LED 已被網站控制。
 
 ## 下一步
 
-現場完成 Prompt E 後，依 Word 指引連續測試至少 10 組 LED 開／關及 matching ACK。
+把 `docs/PANGHU_FINAL_SYNC_PROMPT.md` 直接貼到伴虎，更新並只執行 `03_futurelite_full_console.py`，然後依現場驗收清單測試 Soil、A／B、LED matching ACK 及 M2 本機風扇。

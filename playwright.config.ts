@@ -7,6 +7,7 @@ export default defineConfig({
   timeout: 35_000,
   expect: { timeout: 12_000 },
   fullyParallel: false,
+  workers: 1,
   retries: 1,
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
@@ -27,7 +28,7 @@ export default defineConfig({
   webServer: liveBaseUrl
     ? undefined
     : {
-        command: 'npm run dev -- --port 4173',
+        command: 'npm run qa:serve -- --port 4173',
         url: 'http://127.0.0.1:4173',
         reuseExistingServer: true,
         timeout: 120_000,

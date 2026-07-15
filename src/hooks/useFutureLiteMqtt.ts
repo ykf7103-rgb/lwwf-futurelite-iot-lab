@@ -6,6 +6,7 @@ import { createTopics, DEFAULT_MQTT_URL, DEFAULT_TOPIC_PREFIX } from '../mqtt/to
 import type {
   BrokerStatus,
   ButtonMessage,
+  ChannelMetrics,
   CommandState,
   RawLogEntry,
   SelfTestState,
@@ -16,6 +17,13 @@ const DEVICE_OFFLINE_MS = 6_000
 const COMMAND_TIMEOUT_MS = 5_000
 const SELFTEST_TIMEOUT_MS = 5_000
 const MAX_LOGS = 300
+
+const emptyChannelMetrics = (): ChannelMetrics => ({
+  status: { count: 0, lastAt: null },
+  soil: { count: 0, lastAt: null },
+  button: { count: 0, lastAt: null },
+  ack: { count: 0, lastAt: null },
+})
 
 const makeLog = (
   direction: RawLogEntry['direction'],
@@ -46,6 +54,7 @@ export const useFutureLiteMqtt = () => {
   const [selfTest, setSelfTest] = useState<SelfTestState>({ status: 'idle' })
   const [logs, setLogs] = useState<RawLogEntry[]>([])
   const [lastSafeError, setLastSafeError] = useState<string | null>(null)
+  const [channelMetrics, setChannelMetrics] = useState<ChannelMetrics>(emptyChannelMetrics)
 
   const serviceRef = useRef<MqttService | undefined>(undefined)
   const lastDeviceMessageRef = useRef<number | null>(null)
@@ -76,6 +85,18 @@ export const useFutureLiteMqtt = () => {
     setSelfTest(next)
   }, [])
 
+  const recordChannel = useCallback((channel: keyof ChannelMetrics, seq?: number) => {
+    const now = Date.now()
+    setChannelMetrics((current) => ({
+      ...current,
+      [channel]: {
+        count: current[channel].count + 1,
+        lastAt: now,
+        ...(seq === undefined ? {} : { lastSeq: seq }),
+      },
+    }))
+  }, [])
+
   useEffect(() => {
     const service = new MqttService(mqttUrl, topics, {
       onStatus: (status, safeError) => {
@@ -94,16 +115,19 @@ export const useFutureLiteMqtt = () => {
 
         const message = parsed.message
         if (message.kind === 'status') {
+          recordChannel('status', message.value.seq)
           touchDevice()
           setDeviceOnline(message.value.online)
           return
         }
         if (message.kind === 'soil') {
+          recordChannel('soil', message.value.seq)
           touchDevice()
           setSoilSamples((current) => [...current, message.value].slice(-60))
           return
         }
         if (message.kind === 'button') {
+          recordChannel('button', message.value.seq)
           touchDevice()
           const key = `${message.value.button}:${message.value.seq}`
           if (seenButtonEventsRef.current.has(key)) return
@@ -119,6 +143,7 @@ export const useFutureLiteMqtt = () => {
           return
         }
         if (message.kind === 'ack') {
+          recordChannel('ack')
           touchDevice()
           if (!isMatchingAck(commandRef.current, message.value)) {
             appendLog(makeLog('system', 'ack-ignored', message.value.id, '非 matching command ID'))
@@ -175,7 +200,7 @@ export const useFutureLiteMqtt = () => {
       service.destroy()
       serviceRef.current = undefined
     }
-  }, [appendLog, mqttUrl, topics, touchDevice, updateCommand, updateSelfTest])
+  }, [appendLog, mqttUrl, recordChannel, topics, touchDevice, updateCommand, updateSelfTest])
 
   const sendLedCommand = useCallback(
     (on: boolean) => {
@@ -246,6 +271,7 @@ export const useFutureLiteMqtt = () => {
     command,
     selfTest,
     logs,
+    channelMetrics,
     lastSafeError,
     sendLedCommand,
     runSelfTest,
