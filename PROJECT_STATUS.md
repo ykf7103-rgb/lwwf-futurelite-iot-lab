@@ -39,6 +39,7 @@
 - 2026-07-15：正式板端合約改用不超過 32 字元的短 topic：`status`、`soil`、`btn`、`led`、`ack`；網站保留舊 Soil／button topic 接收兼容。
 - 2026-07-15：板端參考程式升級為 `2026.07.15-r3-short-topic`，加入 topic 長度閘門及 status／soil 之間 150ms 發布間隔；伴虎提示改為只作最小局部修正，避免再次重寫整個程式。
 - 2026-07-15：短 topic 版本 `npm run qa` 通過；3 個 Vitest 檔案共 10 tests passed；`npm run qa:visual` desktop／390px mobile 共 8 tests passed。
+- 2026-07-15：Cloudflare Pages production deployment `42da41bc-32b9-4478-8945-f106b6a61651` 完成，來源 commit `d716b23`；正式網址短 topic 版本 desktop／390px mobile 共 8 tests passed。
 
 ## 部署前閘門
 
