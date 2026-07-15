@@ -1,450 +1,417 @@
-"""FutureLite AI integrated MQTT console.
-
-P1: Soil raw telemetry
-P2: LED controlled by local A button or website command
-M2: Fan controlled locally by B button only
-M:  Cycle live, network and web-command pages
 """
-
-import time
-import random
-import socket
-
-try:
-    import ujson as json
-except ImportError:
-    import json
-
-from future import *
-from screen import Screen
+03_futurelite_full_console.py
+FutureLite AI 綜合 MQTT 控制台 — 最終同步版
+三頁屏幕：即時監控 / 連線診斷 / 網站指令
+硬件：Soil(P1) + LED(P2) + FAN(M2) + A/M/B 按鍵
+MQTT：broker.emqx.io
+"""
+import sys, time, json
+from board import *
+from future import MeowPin
 from sensor import Sensor
+from screen import Screen
 from uwifi import WIFI
 
-
-BROKER = "broker.emqx.io"
-MQTT_PORT = 1883
+# ============================================================
+# 常數
+# ============================================================
 PREFIX = "hksteam/demo/fla-7q4m9c2p"
 TOPIC_STATUS = PREFIX + "/status"
 TOPIC_SOIL = PREFIX + "/soil"
 TOPIC_BUTTON = PREFIX + "/btn"
 TOPIC_LED_COMMAND = PREFIX + "/led"
 TOPIC_ACK = PREFIX + "/ack"
-
-PUBLISH_INTERVAL = 1.0
-DISPLAY_INTERVAL = 0.35
-DEBOUNCE_SECONDS = 0.25
-RETRY_SECONDS = 3
+CLIENT_ID_BASE = "futurelite-fla-7q4m9c2p"
+MQTT_HOST = "broker.emqx.io"
+LOOP_MS = 80
+PUBLISH_MS = 1000
+SCREEN_MS = 350
+DEBOUNCE_MS = 50
+RECONNECT_WAIT_MS = 3000
+WIFI_CONNECT_WAIT_MS = 12000
 FAN_SPEED = 50
-PROGRAM_VERSION = "2026.07.15-r5-usb-verified"
+PROGRAM_VERSION = "USB-R6-AUTO-WIFI"
 
-BLACK = (0, 0, 0)
-WHITE = (245, 250, 255)
-CYAN = (70, 220, 245)
-GREEN = (55, 225, 165)
-AMBER = (255, 190, 70)
-RED = (255, 90, 100)
-MUTED = (120, 150, 165)
-
-
-wifi = WIFI()
-screen = Screen()
-buttons = Sensor()
+# ============================================================
+# 硬體初始化
+# ============================================================
 soil_pin = MeowPin("P1", "ANALOG")
 led_pin = MeowPin("P2", "OUT")
-motor = Motor()
-
-try:
-    screen.init()
-except Exception:
-    pass
-
+sensor = Sensor()
+screen = Screen()
 screen.autoRefresh(False)
 
-client_id = "futurelite-" + str(random.getrandbits(24))
+led_pin.setDigital(False)
+led_state = "OFF"
+led_source = "--"
+
+fan_state = "OFF"
+
+btn_a_last = False
+btn_b_last = False
+btn_m_last = False
+
+import random
+random.seed(time.ticks_us())
+tail = f"{random.getrandbits(16):04x}"
+CLIENT_ID = f"{CLIENT_ID_BASE}-{tail}"
+
+# ============================================================
+# Wi-Fi 狀態
+# ============================================================
+def wifi_is_connected():
+    try:
+        import network
+        return bool(network.WLAN(network.STA_IF).isconnected())
+    except:
+        return False
+
+def wifi_auto_connect():
+    """Use FutureOS' saved Wi-Fi profile without exposing its credentials."""
+    global last_err
+    if wifi_is_connected():
+        return True
+    try:
+        import wifi as system_wifi
+        print("[WiFi] starting saved-profile auto connect")
+        system_wifi.try_auto_connect()
+        started = time.ticks_ms()
+        while time.ticks_diff(time.ticks_ms(), started) < WIFI_CONNECT_WAIT_MS:
+            if wifi_is_connected():
+                print("[WiFi] connected")
+                last_err = ""
+                return True
+            time.sleep_ms(250)
+    except Exception as e:
+        last_err = "WiFi " + type(e).__name__
+        print("[WiFi] auto connect FAIL", type(e).__name__, repr(e))
+    return wifi_is_connected()
+
+# ============================================================
+# 統計
+# ============================================================
 seq = 0
-page = 0
-soil_raw = None
-led_on = False
-fan_on = False
-button_a_count = 0
-button_b_count = 0
-tx_count = 0
-rx_count = 0
-reconnect_count = 0
+btn_a_cnt = 0
+btn_b_cnt = 0
+reconn_cnt = 0
+tx_cnt = 0
+rx_cnt = 0
+last_err = ""
+last_cmd_id = ""
+last_cmd_on = None
+last_ack = "--"
+last_cmd_src = "--"
+last_cmd_tick = 0
+
+diag = {"wifi":False,"dns":False,"tcp":False,"mqtt":False,"sub":False,"pub":False}
+
+def run_diag():
+    d = {"wifi":wifi_is_connected(),"dns":False,"tcp":False,"mqtt":False,"sub":False,"pub":False}
+    try:
+        import socket
+        ai = socket.getaddrinfo(MQTT_HOST, 1883)
+        d["dns"] = True
+        s = socket.socket()
+        s.settimeout(5)
+        s.connect(ai[0][4])
+        d["tcp"] = True
+        s.close()
+    except:
+        pass
+    diag.update(d)
+
+# ============================================================
+# MQTT
+# ============================================================
+wifi_mqtt = WIFI()
+mqtt_ok = False
+last_pub_tick = 0
+last_reconn_tick = 0
 publish_phase = 0
 
-wifi_ok = False
-dns_ok = False
-tcp_ok = False
-mqtt_ok = False
-sub_ok = False
-pub_ok = False
+def mqtt_connect():
+    global mqtt_ok, diag
+    try:
+        r = wifi_mqtt.mqttConnect(MQTT_HOST, CLIENT_ID, "", "")
+        print(f"[MQTT] mqttConnect ret type={type(r).__name__} repr={repr(r)}")
+        wifi_mqtt.subscribe(TOPIC_LED_COMMAND)
+        print("[MQTT] subscribe OK")
+        wifi_mqtt.publish(TOPIC_STATUS, json.dumps({"online":True,"seq":0,"ver":PROGRAM_VERSION}))
+        print("[MQTT] publish test OK")
+        mqtt_ok = True
+        diag["mqtt"] = True; diag["sub"] = True; diag["pub"] = True
+        # topic 長度檢查
+        for topic in (TOPIC_STATUS, TOPIC_SOIL, TOPIC_BUTTON, TOPIC_LED_COMMAND, TOPIC_ACK):
+            print("TOPIC", len(topic), topic)
+            if len(topic) > 32:
+                raise ValueError("topic too long: " + topic)
+        return True
+    except Exception as e:
+        print(f"[MQTT] connect FAIL: {type(e).__name__} {repr(e)}")
+        mqtt_ok = False
+        diag["mqtt"] = False; diag["sub"] = False; diag["pub"] = False
+        return False
 
-last_error = ""
-last_command_id = ""
-last_command_on = None
-last_command_at = None
-last_ack = "--"
-last_led_source = "BOOT"
-
-previous_a = False
-previous_b = False
-previous_m = False
-last_a_at = -10.0
-last_b_at = -10.0
-last_m_at = -10.0
-
-
-def next_seq():
-    global seq
-    seq += 1
-    return seq
-
-
-def safe_error(error):
-    text = str(error).replace("\n", " ")
-    return text[:24]
-
-
-def status_word(value):
-    return "OK" if value else "FAIL"
-
-
-def set_led(on, source):
-    global led_on, last_led_source
-    led_pin.setDigital(1 if on else 0)
-    led_on = bool(on)
-    last_led_source = source
-
-
-def set_fan(on):
-    global fan_on
-    if on:
-        motor.setSpeed(2, FAN_SPEED, 0)
-        fan_on = True
-    else:
-        motor.stopMotor(2)
-        fan_on = False
-
-
-def publish_json(topic, value):
-    global tx_count, pub_ok
-    payload = json.dumps(value)
-    wifi.publish(topic, payload)
-    print("PUB", topic, payload)
-    tx_count += 1
-    pub_ok = True
-
-
-def publish_button(name):
-    publish_json(TOPIC_BUTTON, {"button": name, "seq": next_seq()})
-
-
-def normalize_message(message):
-    if message is None:
-        return None
-    if isinstance(message, bytes):
-        return message.decode("utf-8")
-    if isinstance(message, dict):
-        if "payload" in message:
-            return normalize_message(message["payload"])
-        return json.dumps(message)
-    if isinstance(message, (list, tuple)):
-        if not message:
-            return None
-        return normalize_message(message[-1])
-    return str(message)
-
-
-def send_ack(command_id, ok, on=None, error=None):
-    payload = {"id": command_id, "ok": bool(ok)}
-    if on is not None:
-        payload["on"] = bool(on)
-    if error:
-        payload["error"] = safe_error(error)
-    publish_json(TOPIC_ACK, payload)
-
-
-def handle_led_command(message):
-    global rx_count, last_command_id, last_command_on
-    global last_command_at, last_ack, last_error
-
-    payload = normalize_message(message)
-    if not payload:
+def pub(topic, payload):
+    global tx_cnt
+    if not mqtt_ok:
         return
-
-    rx_count += 1
-    print("RX", TOPIC_LED_COMMAND, payload)
-    command_id = ""
     try:
-        command = json.loads(payload)
-        command_id = command.get("id", "")
-        command_on = command.get("on", None)
-        if not isinstance(command_id, str) or not command_id:
-            raise ValueError("missing id")
-        if not isinstance(command_on, bool):
-            raise ValueError("on must be boolean")
+        j = json.dumps(payload)
+        wifi_mqtt.publish(topic, j)
+        tx_cnt += 1
+        return True
+    except Exception as e:
+        print(f"[PUB ERR] {topic} {type(e).__name__} {repr(e)}")
+        return False
 
-        # A repeated command is not executed twice, but its ACK is repeated.
-        if command_id != last_command_id:
-            set_led(command_on, "WEB")
-
-        last_command_id = command_id
-        last_command_on = command_on
-        last_command_at = time.monotonic()
-        send_ack(command_id, True, command_on)
-        print("ACK", command_id, command_on)
-        last_ack = "OK"
-        last_error = ""
-    except Exception as error:
-        last_error = safe_error(error)
-        print("CMD_ERROR", last_error)
-        last_ack = "ERR"
-        if command_id:
-            try:
-                send_ack(command_id, False, error=last_error)
-            except Exception:
-                pass
-
-
-def network_probe():
-    global wifi_ok, dns_ok, tcp_ok, last_error
-
-    wifi_ok = bool(wifi.isconnect())
-    dns_ok = False
-    tcp_ok = False
-    if not wifi_ok:
+def poll_mqtt():
+    global mqtt_ok, led_state, led_source, rx_cnt, last_cmd_id, last_cmd_on, last_ack, last_cmd_tick, last_cmd_src
+    if not mqtt_ok:
         return
-
-    probe = None
     try:
-        address = socket.getaddrinfo(BROKER, MQTT_PORT)[0][-1]
-        dns_ok = True
-        probe = socket.socket()
-        try:
-            probe.settimeout(3)
-        except Exception:
-            pass
-        probe.connect(address)
-        tcp_ok = True
-    except Exception as error:
-        last_error = safe_error(error)
-    finally:
-        if probe is not None:
-            try:
-                probe.close()
-            except Exception:
-                pass
+        # FutureLite uwifi requires the subscribed topic as the argument.
+        msg = wifi_mqtt.getMessage(TOPIC_LED_COMMAND)
+        if msg is None:
+            return
+        raw = msg.decode("utf-8") if isinstance(msg, bytes) else str(msg)
+        data = json.loads(raw)
+        cid = data.get("id")
+        con = data.get("on")
+        if cid is None or con is None:
+            return
+        rx_cnt += 1
+        last_cmd_id = cid
+        last_cmd_tick = time.ticks_ms()
+        last_cmd_src = "WEB"
+        print(f"[RX] led id={cid} on={con}")
+        if con is True:
+            led_pin.setDigital(True)
+            led_state = "ON"
+            led_source = "WEB"
+            last_cmd_on = True
+            ack_ok = pub(TOPIC_ACK, {"id":cid,"ok":True,"on":True})
+            last_ack = "OK" if ack_ok else "ERR"
+            print(f"[ACK] {'OK' if ack_ok else 'FAIL'} id={cid} on=True")
+        elif con is False:
+            led_pin.setDigital(False)
+            led_state = "OFF"
+            led_source = "WEB"
+            last_cmd_on = False
+            ack_ok = pub(TOPIC_ACK, {"id":cid,"ok":True,"on":False})
+            last_ack = "OK" if ack_ok else "ERR"
+            print(f"[ACK] {'OK' if ack_ok else 'FAIL'} id={cid} on=False")
+        else:
+            ack_ok = pub(TOPIC_ACK, {"id":cid,"ok":False})
+            last_ack = "ERR"
+    except Exception as e:
+        print(f"[POLL ERR] {type(e).__name__} {repr(e)}")
 
+# ============================================================
+# 螢幕
+# ============================================================
+_page = 1
+_last_screen = 0
 
-def connect_mqtt():
-    global mqtt_ok, sub_ok, pub_ok, last_error
+def center(text, size=1, w=160, h=128):
+    cw, ew, nw, sw = 12, 7, 7, 6
+    tw = sum(cw if '\u4e00'<=c<='\u9fff' else (nw if c.isdigit() else (sw if c==' ' else ew)) for c in text)
+    return ((w-tw*size)//2, (h-12*size)//2)
 
-    mqtt_ok = False
-    sub_ok = False
-    pub_ok = False
-    wifi.mqttConnect(BROKER, client_id, "", "")
-    # mqttConnect succeeds with a None return value; no exception means success.
-    mqtt_ok = True
-    for topic in (TOPIC_STATUS, TOPIC_SOIL, TOPIC_BUTTON, TOPIC_LED_COMMAND, TOPIC_ACK):
-        if len(topic) > 32:
-            raise ValueError("topic too long: " + topic)
-    wifi.subscribe(TOPIC_LED_COMMAND)
-    sub_ok = True
-    last_error = ""
-
-
-def read_soil():
-    global soil_raw, last_error
-    try:
-        value = soil_pin.getAnalog()
-        soil_raw = int(value)
-    except Exception as error:
-        last_error = safe_error(error)
-        print("SOIL_ERROR", last_error)
-
-
-def process_buttons(now):
-    global previous_a, previous_b, previous_m
-    global last_a_at, last_b_at, last_m_at
-    global button_a_count, button_b_count, page
-
-    a_pressed = bool(buttons.btnValue("a"))
-    b_pressed = bool(buttons.btnValue("b"))
-    m_pressed = bool(buttons.btnValue("m"))
-
-    if a_pressed and not previous_a and now - last_a_at >= DEBOUNCE_SECONDS:
-        last_a_at = now
-        button_a_count += 1
-        set_led(not led_on, "A")
-        publish_button("A")
-
-    if b_pressed and not previous_b and now - last_b_at >= DEBOUNCE_SECONDS:
-        last_b_at = now
-        button_b_count += 1
-        set_fan(not fan_on)
-        publish_button("B")
-
-    if m_pressed and not previous_m and now - last_m_at >= DEBOUNCE_SECONDS:
-        last_m_at = now
-        page = (page + 1) % 3
-
-    previous_a = a_pressed
-    previous_b = b_pressed
-    previous_m = m_pressed
-
-
-def draw_line(text, y, color=WHITE):
-    screen.text(str(text), 80, y, 1, color)
-
-
-def render_live():
-    draw_line("綜合控制台", 8, CYAN)
-    draw_line("WiFi:{} MQTT:{}".format(status_word(wifi_ok), status_word(mqtt_ok)), 23, GREEN if mqtt_ok else RED)
-    draw_line("Soil P1:{}".format("--" if soil_raw is None else soil_raw), 38, WHITE)
-    draw_line("LED P2:{} A:{}".format("ON" if led_on else "OFF", button_a_count), 53, GREEN if led_on else MUTED)
-    draw_line("FAN M2:{} B:{}".format("ON" if fan_on else "OFF", button_b_count), 68, AMBER if fan_on else MUTED)
-    draw_line("Seq:{} RX:{} TX:{}".format(seq, rx_count, tx_count), 83, WHITE)
-    draw_line("LED來源:{}".format(last_led_source), 98, MUTED)
-    draw_line("M:下一頁", 113, CYAN)
-
-
-def render_network():
-    draw_line("連線診斷", 8, CYAN)
-    draw_line("WiFi:{}".format(status_word(wifi_ok)), 23, GREEN if wifi_ok else RED)
-    draw_line("DNS:{}".format(status_word(dns_ok)), 38, GREEN if dns_ok else RED)
-    draw_line("TCP1883:{}".format(status_word(tcp_ok)), 53, GREEN if tcp_ok else RED)
-    draw_line("MQTT:{}".format(status_word(mqtt_ok)), 68, GREEN if mqtt_ok else RED)
-    draw_line("SUB:{} PUB:{}".format(status_word(sub_ok), status_word(pub_ok)), 83, GREEN if sub_ok and pub_ok else AMBER)
-    draw_line("重連:{} {}".format(reconnect_count, last_error), 98, RED if last_error else MUTED)
-    draw_line("M:下一頁", 113, CYAN)
-
-
-def render_command():
-    if last_command_on is None:
-        command_text = "尚未收到"
-    else:
-        command_text = "LED ON" if last_command_on else "LED OFF"
-    age = "--"
-    if last_command_at is not None:
-        age = int(max(0, time.monotonic() - last_command_at))
-
-    draw_line("網站指令", 8, CYAN)
-    draw_line("最後:{}".format(command_text), 23, WHITE)
-    draw_line("ID:{}".format(last_command_id[-8:] if last_command_id else "--"), 38, MUTED)
-    draw_line("ACK:{}".format(last_ack), 53, GREEN if last_ack == "OK" else AMBER)
-    draw_line("RX:{} TX:{}".format(rx_count, tx_count), 68, WHITE)
-    draw_line("多久前:{}s".format(age), 83, MUTED)
-    draw_line("錯誤:{}".format(last_error or "--"), 98, RED if last_error else MUTED)
-    draw_line("M:下一頁", 113, CYAN)
-
-
-def render():
-    screen.fill(BLACK)
-    if page == 0:
-        render_live()
-    elif page == 1:
-        render_network()
-    else:
-        render_command()
+def draw_p1():
+    screen.fill((0,0,0))
+    x,_=center("USB R5 MONITOR",2)
+    screen.text("USB R5 MONITOR",x,2,2,(0,255,255))
+    wok = wifi_is_connected()
+    screen.text(f"WiFi:{'YES' if wok else 'NO'}  MQTT:{'YES' if mqtt_ok else 'NO'}",5,25,1,(200,200,200))
+    screen.text(f"Soil P1:{soil_pin.getAnalog()}",5,42,1,(0,255,0))
+    screen.text(f"LED P2:{led_state}",5,56,1,(255,255,0))
+    screen.text(f"FAN M2:{fan_state}",5,70,1,(255,180,0))
+    screen.text(f"A:{btn_a_cnt} B:{btn_b_cnt}",5,84,1,(180,180,255))
+    screen.text(f"Seq:{seq}",5,98,1,(180,180,180))
+    screen.text(f"RX:{rx_cnt} TX:{tx_cnt}",5,110,1,(150,150,150))
+    screen.text("M:next",60,120,1,(80,80,80))
     screen.refresh()
 
+def draw_p2():
+    screen.fill((0,0,0))
+    x,_=center("NETWORK TEST",2)
+    screen.text("NETWORK TEST",x,2,2,(0,255,255))
+    y=25
+    for k in ["wifi","dns","tcp","mqtt","sub","pub"]:
+        v = diag.get(k,False)
+        screen.text(f"{k.upper()}:{'YES' if v else 'NO'}",5,y,1,(200,200,200))
+        y+=14
+    screen.text(f"Reconn:{reconn_cnt}",5,y,1,(180,180,180)); y+=14
+    e = last_err[:22] if last_err else "--"
+    screen.text(f"ERR:{e}",5,y,1,(255,100,100))
+    screen.text("M:next",60,118,1,(80,80,80))
+    screen.refresh()
 
-def publish_live_data():
-    global publish_phase
-    # The board uwifi transport can drop the second of two immediate QoS 0
-    # publishes. Alternate one message per second, so status and Soil each
-    # arrive about every two seconds.
-    if publish_phase == 0:
-        publish_json(
-            TOPIC_STATUS,
-            {"online": True, "seq": next_seq(), "ver": PROGRAM_VERSION},
-        )
-        publish_phase = 1
+def draw_p3():
+    screen.fill((0,0,0))
+    x,_=center("WEB COMMAND",2)
+    screen.text("WEB COMMAND",x,2,2,(0,255,255))
+    cs = "--" if last_cmd_on is None else ("ON" if last_cmd_on else "OFF")
+    screen.text(f"LastCmd:LED {cs}",5,25,1,(200,200,200))
+    sid = last_cmd_id[-8:] if len(last_cmd_id)>8 else (last_cmd_id if last_cmd_id else "--")
+    screen.text(f"ID:{sid}",5,39,1,(180,180,255))
+    ac = (0,255,0) if last_ack=="OK" else ((255,100,100) if last_ack=="ERR" else (150,150,150))
+    screen.text(f"ACK:{last_ack}",5,53,1,ac)
+    screen.text(f"From:{last_cmd_src}",5,67,1,(200,200,200))
+    screen.text(f"RX:{rx_cnt} TX:{tx_cnt}",5,81,1,(180,180,180))
+    if last_cmd_tick>0:
+        sc = time.ticks_diff(time.ticks_ms(),last_cmd_tick)//1000
+        screen.text(f"Ago:{sc}s",5,95,1,(150,150,150))
+    screen.text("M:next",60,118,1,(80,80,80))
+    screen.refresh()
+
+def refresh():
+    global _last_screen
+    now = time.ticks_ms()
+    if time.ticks_diff(now,_last_screen) < SCREEN_MS:
         return
+    _last_screen = now
+    if _page==1: draw_p1()
+    elif _page==2: draw_p2()
+    else: draw_p3()
 
-    if soil_raw is None:
-        read_soil()
-    if soil_raw is not None:
-        publish_json(TOPIC_SOIL, {"raw": soil_raw, "seq": next_seq()})
-    publish_phase = 0
-
-
-def safe_stop():
-    global mqtt_ok, sub_ok, pub_ok
-    mqtt_ok = False
-    sub_ok = False
-    pub_ok = False
-    try:
-        set_fan(False)
-    except Exception:
-        pass
-
-
-set_led(False, "BOOT")
-set_fan(False)
-print("FutureLite Bridge", PROGRAM_VERSION, client_id)
-render()
-
+# ============================================================
+# 主程式
+# ============================================================
 try:
+    print("[System] FutureLite 綜合控制台啟動", PROGRAM_VERSION)
+    led_pin.setDigital(False)
+    try:
+        from future import Motor
+        Motor().stopMotor(2)
+    except:
+        pass
+    screen.fill((0,0,0))
+    screen.text("檢查網絡中...",*center("檢查網絡中...",2),2,(0,255,255))
+    screen.refresh()
+    wifi_auto_connect()
+    run_diag()
+    print(f"[Diag] WiFi:{'OK' if diag['wifi'] else 'NO'} DNS:{'OK' if diag['dns'] else 'NO'} TCP:{'OK' if diag['tcp'] else 'NO'}")
+    if diag["wifi"] and diag["dns"] and diag["tcp"]:
+        mqtt_connect()
+    print(f"[MQTT] {'OK' if mqtt_ok else 'FAIL'}")
+    refresh()
+
     while True:
-        if not wifi.isconnect():
-            wifi_ok = False
-            mqtt_ok = False
-            sub_ok = False
-            pub_ok = False
-            last_error = "WiFi disconnected"
-            safe_stop()
-            render()
-            time.sleep(RETRY_SECONDS)
-            continue
+        now = time.ticks_ms()
 
-        try:
-            network_probe()
-            connect_mqtt()
-            read_soil()
-            publish_live_data()
+        # --- Wi-Fi 自動重連（使用 FutureOS 已儲存設定）---
+        if not wifi_is_connected():
+            if last_reconn_tick==0 or time.ticks_diff(now,last_reconn_tick)>=RECONNECT_WAIT_MS:
+                last_reconn_tick=now
+                reconn_cnt+=1
+                mqtt_ok=False
+                diag["mqtt"]=False; diag["sub"]=False; diag["pub"]=False
+                wifi_auto_connect()
 
-            last_publish = time.monotonic()
-            last_display = 0
+        # --- MQTT 重連 ---
+        if wifi_is_connected() and not mqtt_ok:
+            if last_reconn_tick==0 or time.ticks_diff(now,last_reconn_tick)>=RECONNECT_WAIT_MS:
+                last_reconn_tick=now
+                reconn_cnt+=1
+                print(f"[Reconn] #{reconn_cnt}")
+                if fan_state=="ON":
+                    try:
+                        from future import Motor
+                        Motor().stopMotor(2)
+                        fan_state="OFF"
+                    except: pass
+                run_diag()
+                if diag["dns"] and diag["tcp"]:
+                    mqtt_connect()
 
-            while wifi.isconnect():
-                now = time.monotonic()
-                process_buttons(now)
+        # --- 輪詢 MQTT ---
+        poll_mqtt()
 
-                message = wifi.getMessage(TOPIC_LED_COMMAND)
-                if message is not None:
-                    handle_led_command(message)
+        # --- 讀取 Soil ---
+        soil_val = soil_pin.getAnalog()
 
-                read_soil()
-                if now - last_publish >= PUBLISH_INTERVAL:
-                    publish_live_data()
-                    last_publish = now
+        # --- 按鍵 ---
+        ca = sensor.btnValue('a')
+        cb = sensor.btnValue('b')
+        cm = sensor.btnValue('m')
 
-                if now - last_display >= DISPLAY_INTERVAL:
-                    wifi_ok = bool(wifi.isconnect())
-                    render()
-                    last_display = now
+        if ca and not btn_a_last:
+            time.sleep_ms(DEBOUNCE_MS)
+            if sensor.btnValue('a'):
+                btn_a_cnt+=1
+                if led_state=="ON":
+                    led_pin.setDigital(False); led_state="OFF"
+                else:
+                    led_pin.setDigital(True); led_state="ON"
+                led_source="A本機"
+                seq+=1
+                pub(TOPIC_BUTTON,{"button":"A","seq":seq})
+                print(f"TEL|{seq}|A|LED|{led_state}")
 
-                time.sleep(0.05)
+        if cb and not btn_b_last:
+            time.sleep_ms(DEBOUNCE_MS)
+            if sensor.btnValue('b'):
+                btn_b_cnt+=1
+                if fan_state=="ON":
+                    try:
+                        from future import Motor
+                        Motor().stopMotor(2)
+                    except: pass
+                    fan_state="OFF"
+                else:
+                    try:
+                        from future import Motor
+                        Motor().setSpeed(2,FAN_SPEED,0)
+                    except: pass
+                    fan_state="ON"
+                seq+=1
+                pub(TOPIC_BUTTON,{"button":"B","seq":seq})
+                print(f"TEL|{seq}|B|FAN|{fan_state}")
 
-            raise RuntimeError("WiFi disconnected")
+        if cm and not btn_m_last:
+            time.sleep_ms(DEBOUNCE_MS)
+            if sensor.btnValue('m'):
+                _page = (_page%3)+1
+                if _page==1: draw_p1()
+                elif _page==2: draw_p2()
+                else: draw_p3()
+                _last_screen=time.ticks_ms()
 
-        except KeyboardInterrupt:
-            raise
-        except Exception as error:
-            reconnect_count += 1
-            last_error = safe_error(error)
-            safe_stop()
-            render()
-            time.sleep(RETRY_SECONDS)
+        btn_a_last, btn_b_last, btn_m_last = ca, cb, cm
+
+        # --- 每秒只 publish 一條；status / soil 輪流，各約兩秒一次 ---
+        if mqtt_ok:
+            if last_pub_tick==0 or time.ticks_diff(now,last_pub_tick)>=PUBLISH_MS:
+                last_pub_tick=now
+                seq+=1
+                if publish_phase == 0:
+                    sent = pub(TOPIC_STATUS, {"online":True,"seq":seq,"ver":PROGRAM_VERSION})
+                    if sent: print(f"[PUB] status seq={seq} OK")
+                    publish_phase = 1
+                else:
+                    sent = pub(TOPIC_SOIL, {"raw":soil_val,"seq":seq})
+                    if sent: print(f"[PUB] soil raw={soil_val} seq={seq} OK")
+                    publish_phase = 0
+
+        # --- 螢幕 ---
+        refresh()
+        time.sleep_ms(LOOP_MS)
 
 except KeyboardInterrupt:
-    last_error = "STOPPED"
+    print("[System] 收到停止訊號")
+except Exception as e:
+    last_err = f"{type(e).__name__}"
+    print("ERROR:")
+    sys.print_exception(e)
 finally:
-    safe_stop()
+    led_pin.setDigital(False)
     try:
-        set_led(False, "STOP")
-    except Exception:
-        pass
-    render()
+        from future import Motor
+        Motor().stopMotor(2)
+    except: pass
+    screen.fill((0,0,0))
+    screen.text("STOPPED",*center("STOPPED",2),2,(255,0,0))
+    screen.refresh()
+    print("[System] LED OFF, FAN OFF, STOPPED")

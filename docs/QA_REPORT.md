@@ -68,3 +68,11 @@
 - 第二輪正式網址 Playwright：desktop／390px mobile 8 tests passed；telemetry、A 事件、LED matching ACK、自我測試、斷線重連、外部程式連結及 Soil 量尺全部通過。
 - 短 topic 正式網址 Playwright：desktop／390px mobile 共 8 tests passed；公開 Broker self-test、短 `soil`、`btn`、`led`、matching `ack`、手動斷線／重連及安全 debug 全部通過。
 - USB-R5 自動重試正式版 Playwright：desktop／390px mobile 共 8 tests passed；正式網址 HTTP 200，載入新版 bundle，實體主板在線期間 Soil 及 LED matching ACK 流程通過。
+
+## USB-R6 自動 Wi-Fi 回歸測試
+
+- 板端版本：`USB-R6-AUTO-WIFI`；啟動及 Wi-Fi 斷線時呼叫 FutureOS `try_auto_connect()`，只使用已儲存設定，不輸出 SSID／密碼。
+- USB 正式啟動檔：`E:\code.py`；舊診斷及備份改為 `.bak`，沒有刪除。
+- 語法檢查：通過；板內檔與 repo 正式源碼 SHA-256 相同。
+- 重新啟動後 MQTT：status seq 7、9；Soil seq 8 raw 3597。
+- LED 網站路徑：開啟及關閉均收到 matching ACK；最終狀態 OFF。

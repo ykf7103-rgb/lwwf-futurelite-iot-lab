@@ -1,4 +1,4 @@
-# 伴虎最終同步提示（r5 USB 實機驗證版）
+# 伴虎最終同步提示（r6 USB 自動 Wi-Fi 實機驗證版）
 
 目前主板已經由 Codex 經 USB 直接修正及實機驗收；只有日後板端檔案被覆蓋或需要還原時，才把以下整段貼到 FutureLite 伴虎。
 
@@ -39,7 +39,8 @@ hksteam/demo/fla-7q4m9c2p
 8. 收到 LED payload：{"id":"...","on":true或false} 後，實際控制 P2。
 9. 完成後 publish ACK：{"id":"原本相同id","ok":true,"on":實際狀態}。
 10. Wi-Fi／MQTT 重連後必須重新 subscribe。
-11. 設定 PROGRAM_VERSION = "2026.07.15-r5-usb-verified"，並在 status 加入 "ver": PROGRAM_VERSION。
+11. Wi-Fi 未連接時必須呼叫系統 `wifi.try_auto_connect()`，只使用 FutureOS 已儲存設定，不讀取、不顯示 SSID 或密碼；成功後才連 MQTT。
+12. 設定 PROGRAM_VERSION = "USB-R6-AUTO-WIFI"，並在 status 加入 "ver": PROGRAM_VERSION。
 
 在 mqttConnect 成功後加入以下靜態檢查；任何板端 topic 超過 32 字元便停止並清楚報錯：
 

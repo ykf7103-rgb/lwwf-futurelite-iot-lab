@@ -48,7 +48,7 @@ npm run qa:visual
 
 1. 等候「MQTT Broker」顯示已連線。
 2. 按「Broker 自我測試」，確認網站收到自己的 self-test，而 FutureLite 仍顯示離線。
-3. 在 FutureLite AI 執行 `03_futurelite_full_console.py`；已透過 USB 實機驗證的正式版本位於 `device/`，伴虎同步提示位於 `docs/PANGHU_FINAL_SYNC_PROMPT.md`。
+3. FutureLite USB 磁碟上的唯一正式啟動檔是 `code.py`；在啟動選單選「快速執行」即可。GitHub 的同一份實機源碼位於 `device/03_futurelite_full_console.py`。
 4. 確認短 topic `soil` 的 raw 每約 2 秒更新，短 topic `btn` 的 A／B 事件計數正確。
 5. 發送 LED 開／關指令；網站會自動重試，以實體 LED 改變及相同 command ID 的 ACK 作唯一成功標準。
 

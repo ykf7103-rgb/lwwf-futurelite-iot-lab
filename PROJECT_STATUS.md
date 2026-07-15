@@ -46,6 +46,10 @@
 - 2026-07-15：網站加入同 command ID 每秒自動重試、5 秒 ACK 上限；本機 `npm run qa` 通過 10 tests，`npm run qa:visual` desktop／390px mobile 共 8 tests passed，測試會刻意忽略首個 LED 指令以驗證重試。
 - 2026-07-15：Cloudflare Pages production deployment `bd361091-0a6f-4e79-8b79-42232e298f9b` 完成，來源 commit `c068674`，正式網址 HTTP 200。
 - 2026-07-15：USB-R5 正式網址 desktop／390px mobile 共 8 tests passed；即時 MQTT、Soil raw、LED matching ACK、Broker 自我測試、斷線重連、console、debug 及 overflow 全部通過。
+- 2026-07-15：重新開機後 Wi-Fi／MQTT 失效的根因是板端只檢查連線，沒有呼叫 FutureOS 儲存設定的 `try_auto_connect()`；已升級為 `USB-R6-AUTO-WIFI`，啟動及斷線時均會自動重連，沒有讀取或顯示 SSID／密碼。
+- 2026-07-15：USB 啟動檔已整理為唯一正式 `code.py`；7 個舊測試／診斷／備份程式改為 `.bak`，不再混入 `.py` 啟動清單，原檔全部保留。
+- 2026-07-15：R6 重新啟動實測收到 status seq 7／9 及 Soil seq 8 raw 3597；LED 開在第 2 次重試 ACK，LED 關在第 3 次重試 ACK，最後維持關閉。
+- 2026-07-15：板內 `E:\code.py` 與 GitHub 正式源碼 SHA-256 完全相同：`57B9C21DEBF4117E50A6EE7D8314E8D92F7DCA1C134723DB97A4F4072DC7570D`。
 
 ## 部署前閘門
 
@@ -57,8 +61,8 @@
 
 ## 現場完成狀態
 
-USB 主板與公開 Broker 的 Soil 上傳、LED 開、LED 關及 matching ACK 已完成實機驗收。板內保留修正前備份；M2 風扇繼續只由實體 B 鍵本機控制，不經公開網站遙控。
+USB 主板與公開 Broker 的自動 Wi-Fi 重連、Soil 上傳、LED 開、LED 關及 matching ACK 已完成實機驗收。板內保留修正前備份；M2 風扇繼續只由實體 B 鍵本機控制，不經公開網站遙控。
 
 ## 下一步
 
-維持 FutureLite 連接 Wi-Fi 及持續執行板內 `03_futurelite_full_console.py`；網站重新整理後即可查看 Soil raw、A／B 事件及 LED matching ACK。若板端程式日後被伴虎重新產生，應以 `device/03_futurelite_full_console.py` 的 USB 實機驗證版本為準，不再覆蓋成舊版。
+FutureLite 重新開機後選「快速執行」→ `code.py`；程式會使用 FutureOS 已儲存的網絡設定自動連接 Wi-Fi 及 MQTT。若板端程式日後被伴虎重新產生，應以 `device/03_futurelite_full_console.py` 的 USB 實機驗證版本為準，不再覆蓋成舊版。
