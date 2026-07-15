@@ -5,6 +5,7 @@ import { EventPanel } from './components/EventPanel'
 import { RawLog } from './components/RawLog'
 import { SoilChart } from './components/SoilChart'
 import { StatusHeader } from './components/StatusHeader'
+import { SyncPanel } from './components/SyncPanel'
 import { useFutureLiteMqtt } from './hooks/useFutureLiteMqtt'
 import './styles.css'
 
@@ -81,6 +82,12 @@ function App() {
 
         <DeviceDiagnostics
           brokerStatus={mqtt.brokerStatus}
+          deviceOnline={mqtt.deviceOnline}
+          channels={mqtt.channelMetrics}
+          command={mqtt.command}
+        />
+
+        <SyncPanel
           deviceOnline={mqtt.deviceOnline}
           channels={mqtt.channelMetrics}
           command={mqtt.command}

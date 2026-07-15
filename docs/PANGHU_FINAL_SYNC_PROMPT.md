@@ -5,6 +5,11 @@
 ```text
 請修正現有 03_futurelite_full_console.py，完成網站與 FutureLite 的最終同步版本。
 
+唯一正式參考程式：
+https://raw.githubusercontent.com/ykf7103-rgb/lwwf-futurelite-iot-lab/main/device/03_futurelite_full_console.py
+
+如果伴虎可以讀取網址，請直接以這個網址的完整內容覆蓋板上的 03_futurelite_full_console.py，不要自行刪減。若不能讀取網址，才按以下規格完整重建。
+
 目前已由外部 MQTT 監聽確認：
 - status 每約兩秒正常發布
 - A／B event 曾經正常發布
@@ -63,6 +68,8 @@
 - publish(TOPIC_ACK, ...)
 - ACK 使用收到的相同 command id
 - 永久 while 迴圈
+- REPL 必須每約兩秒看到一則 PUB status 及一則 PUB telemetry/soil
+- 收到網站指令時必須看到 RX cmd/led 及 ACK 記錄
 
 只儲存 03_futurelite_full_console.py，不要自動執行。完成後回覆：
 「03_futurelite_full_console.py 已同步 Soil 與 LED ACK，請手動執行。」

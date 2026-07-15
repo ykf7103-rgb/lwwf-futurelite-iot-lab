@@ -30,6 +30,9 @@
 - 2026-07-15：本機 Playwright 改用獨立 QA topic，避免現場主板及桌面／手機並行測試互相污染。
 - 2026-07-15：Cloudflare Pages production deployment `74b78748-3a4f-4b49-904c-54c6c4d506f4` 完成，來源 commit `3f77c13`，正式網址已更新。
 - 2026-07-15：正式網址 desktop／390px mobile 共 8 tests passed；Broker self-test、telemetry、A 事件、matching ACK、斷線重連、debug、console 及 overflow 全部通過。
+- 2026-07-15：第二次現場 MQTT 監聽仍只收到 5 則 `status`（seq 116–120），沒有 Soil 或 ACK，確認 FutureLite 仍在執行不完整板端版本。
+- 2026-07-15：網站新增「兩端同步」進度、正式板端程式／伴虎提示入口、Soil 0–4095 raw 量尺及 LED 逾時一鍵重試。
+- 2026-07-15：板端參考程式升級為 `2026.07.15-r2`，REPL 會輸出 PUB、RX、ACK、SOIL_ERROR；Soil 讀值直接轉為整數，避免非標準數值型別被靜默略過。
 
 ## 部署前閘門
 
@@ -45,4 +48,4 @@
 
 ## 下一步
 
-把 `docs/PANGHU_FINAL_SYNC_PROMPT.md` 直接貼到伴虎，更新並只執行 `03_futurelite_full_console.py`，然後依現場驗收清單測試 Soil、A／B、LED matching ACK 及 M2 本機風扇。
+在正式網站按「開啟完整板端程式」或把 `docs/PANGHU_FINAL_SYNC_PROMPT.md` 直接貼到伴虎，完整覆蓋並只執行 `03_futurelite_full_console.py`。REPL 必須同時看到 `PUB .../status` 與 `PUB .../telemetry/soil`，網站 LED 指令則要看到 `RX` 及 `ACK`。

@@ -41,6 +41,8 @@ npm run qa:visual
 
 網站的通道診斷會分開顯示 status、Soil、A／B event 及 LED ACK；「FutureLite 在線」只代表最近收到板端訊息，不等於所有通道已完成。
 
+網站「兩端同步」區直接連到 GitHub 唯一正式板端程式及伴虎更新提示；請完整覆蓋舊檔，不要只把新片段貼入舊主迴圈。
+
 ## 安全限制
 
 這是公開 Broker，只可傳送非敏感測試資料。不可傳送姓名、學生資料、SSID、密碼、IP、Token、API Key 或裝置憑證。網站不控制風扇或馬達。正式產品應改用私人 Broker、每板獨立 credential、topic ACL 及後端 Broker 連線。

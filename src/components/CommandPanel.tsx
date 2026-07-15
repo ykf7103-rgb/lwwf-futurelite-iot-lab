@@ -32,6 +32,7 @@ export function CommandPanel({ brokerStatus, deviceOnline, command, onSend }: Co
   const hasDetails = command.status !== 'idle'
   const ackTime = command.status === 'acknowledged' || command.status === 'failed' ? command.ackAt : undefined
   const latency = command.status === 'acknowledged' || command.status === 'failed' ? command.latency : undefined
+  const retryOn = command.status === 'timeout' || command.status === 'failed' ? command.on : undefined
 
   return (
     <section className="panel command-panel" aria-labelledby="command-title">
@@ -74,6 +75,16 @@ export function CommandPanel({ brokerStatus, deviceOnline, command, onSend }: Co
         <div className="command-recovery" role="note">
           <strong>板端修復重點</strong>
           <p>訂閱 cmd/led → 讀取 JSON → 控制 P2 → 用相同 ID 發布 ack。</p>
+          {retryOn !== undefined && (
+            <button
+              className="button button--ghost button--small"
+              type="button"
+              onClick={() => onSend(retryOn)}
+              disabled={!deviceOnline || brokerStatus !== 'connected'}
+            >
+              重新發送 LED {retryOn ? '開' : '關'}
+            </button>
+          )}
         </div>
       )}
 

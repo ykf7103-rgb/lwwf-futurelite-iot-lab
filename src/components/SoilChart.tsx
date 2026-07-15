@@ -22,6 +22,7 @@ const formatTime = (value: number | null) =>
 
 export function SoilChart({ samples, deviceOnline, lastAt }: SoilChartProps) {
   const latest = samples.at(-1)?.raw ?? null
+  const rawPosition = latest === null ? 0 : (Math.max(0, Math.min(4095, latest)) / 4095) * 100
   const values = samples.map((sample) => sample.raw)
   const min = values.length ? Math.min(...values) : 0
   const max = values.length ? Math.max(...values) : 4095
@@ -47,6 +48,17 @@ export function SoilChart({ samples, deviceOnline, lastAt }: SoilChartProps) {
       <div className="soil-reading">
         <strong data-testid="soil-value">{latest ?? '—'}</strong>
         <span>raw</span>
+      </div>
+
+      <div className={`raw-meter ${latest === null ? 'raw-meter--empty' : ''}`} aria-label="Soil raw 量尺 0 至 4095">
+        <div className="raw-meter__track">
+          <span className="raw-meter__fill" style={{ width: `${rawPosition}%` }} />
+          {latest !== null && (
+            <span className="raw-meter__marker" data-testid="soil-meter-marker" style={{ left: `${rawPosition}%` }} />
+          )}
+        </div>
+        <div className="raw-meter__labels"><span>0 raw</span><span>4095 raw</span></div>
+        <p>量尺只顯示原始讀數位置；乾／濕方向須以實物樣本校準。</p>
       </div>
 
       <div className="chart-wrap">

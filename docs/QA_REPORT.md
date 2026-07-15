@@ -24,6 +24,7 @@
 - 同一時段沒有收到 `telemetry/soil`。
 - 發出唯一 ID 的 LED 開及 LED 關指令後，八秒內沒有收到任何 `ack`。
 - 結論：網站接收及顯示邏輯正常；目前缺口在板端常駐程式沒有 Soil publish，亦沒有完成 cmd/led → P2 → matching ACK。
+- 第二次 12 秒監聽仍只收到 5 則 `status`（seq 116–120），再次確認現場未執行正式完整板端版本。
 
 ## 界線
 
@@ -46,3 +47,4 @@
 - Live console／page error：0。
 - Live horizontal overflow：0。
 - 2026-07-15 新版 live Playwright：desktop／390px mobile 共 8 tests passed；四通道診斷、Soil raw、A 事件、LED matching ACK、自我測試及斷線重連全部通過。
+- 第二輪介面本機 Playwright：desktop／390px mobile 8 tests passed；兩端同步入口、Soil raw 量尺及 LED 重試沒有 overflow、console error、page error 或文字重疊。

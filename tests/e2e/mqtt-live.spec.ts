@@ -72,6 +72,7 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
     })
 
     await expect(page.getByTestId('soil-value')).toHaveText('1876')
+    await expect(page.getByTestId('soil-meter-marker')).toBeVisible()
     await expect(page.getByTestId('button-a-count')).toHaveText('1')
 
     await page.getByRole('button', { name: 'LED 開' }).click()

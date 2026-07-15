@@ -12,6 +12,15 @@ test('操作台載入、debug 安全且沒有橫向溢出', async ({ page }, tes
   await expect(page.getByTestId('broker-status')).toHaveText('已連線', { timeout: 20_000 })
   await expect(page.getByRole('heading', { name: 'IoT 現場監控與控制中心' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '即時感測與現場控制' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '兩端必須使用同一份正式合約' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '開啟完整板端程式' })).toHaveAttribute(
+    'href',
+    /device\/03_futurelite_full_console\.py$/,
+  )
+  await expect(page.getByRole('link', { name: '開啟伴虎更新提示' })).toHaveAttribute(
+    'href',
+    /docs\/PANGHU_FINAL_SYNC_PROMPT\.md$/,
+  )
   await expect(page.getByRole('heading', { name: 'Soil 原始數值' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'LED 雙向控制' })).toBeVisible()
 

@@ -35,6 +35,7 @@ DISPLAY_INTERVAL = 0.35
 DEBOUNCE_SECONDS = 0.25
 RETRY_SECONDS = 3
 FAN_SPEED = 50
+PROGRAM_VERSION = "2026.07.15-r2"
 
 BLACK = (0, 0, 0)
 WHITE = (245, 250, 255)
@@ -127,7 +128,9 @@ def set_fan(on):
 
 def publish_json(topic, value):
     global tx_count, pub_ok
-    wifi.publish(topic, json.dumps(value))
+    payload = json.dumps(value)
+    wifi.publish(topic, payload)
+    print("PUB", topic, payload)
     tx_count += 1
     pub_ok = True
 
@@ -170,6 +173,7 @@ def handle_led_command(message):
         return
 
     rx_count += 1
+    print("RX", TOPIC_LED_COMMAND, payload)
     command_id = ""
     try:
         command = json.loads(payload)
@@ -188,10 +192,12 @@ def handle_led_command(message):
         last_command_on = command_on
         last_command_at = time.monotonic()
         send_ack(command_id, True, command_on)
+        print("ACK", command_id, command_on)
         last_ack = "OK"
         last_error = ""
     except Exception as error:
         last_error = safe_error(error)
+        print("CMD_ERROR", last_error)
         last_ack = "ERR"
         if command_id:
             try:
@@ -248,10 +254,10 @@ def read_soil():
     global soil_raw, last_error
     try:
         value = soil_pin.getAnalog()
-        if isinstance(value, (int, float)):
-            soil_raw = int(value)
+        soil_raw = int(value)
     except Exception as error:
         last_error = safe_error(error)
+        print("SOIL_ERROR", last_error)
 
 
 def process_buttons(now):
@@ -361,6 +367,7 @@ def safe_stop():
 
 set_led(False, "BOOT")
 set_fan(False)
+print("FutureLite Bridge", PROGRAM_VERSION, client_id)
 render()
 
 try:

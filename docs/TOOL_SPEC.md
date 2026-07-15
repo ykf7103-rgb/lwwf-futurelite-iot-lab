@@ -15,6 +15,9 @@
 - 可摺疊原始 MQTT log
 - 四通道健康檢查：status、Soil、A／B event、LED ACK
 - 現場硬件配置：P1 Soil、P2 LED、M2 風扇本機模式
+- 兩端同步進度及正式板端程式／伴虎提示入口
+- Soil 0–4095 raw 量尺，不顯示百分比或未校準的乾濕判斷
+- LED 指令逾時後可重發相同開／關意圖，但每次使用新的 command ID
 
 ## 失敗狀態
 
