@@ -21,4 +21,4 @@
 - [x] 手動斷線／重新連線及 component unmount 清理正常。
 - [x] `window.__TOOL_DEBUG__` 安全且可供 QA 讀取。
 - [x] unit tests、typecheck、lint、build、Playwright 桌面／手機測試通過。
-- [ ] Cloudflare 正式網址已部署並完成 live URL 驗證。
+- [x] Cloudflare 正式網址已部署並完成 live URL 驗證。

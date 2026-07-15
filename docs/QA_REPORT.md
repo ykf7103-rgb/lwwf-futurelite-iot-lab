@@ -22,4 +22,15 @@
 
 ## 待執行
 
-- Cloudflare live URL desktop／mobile／MQTT self-test 驗證。
+- 實體 FutureLite、Soil、A／B 按鍵及 LED 現場驗收。
+
+## 正式部署驗證
+
+- 正式網址：`https://lwwf-futurelite-iot-lab.pages.dev/`
+- Cloudflare deployment：`9ad7ab1a-c724-4587-84c3-d6da431338b3`
+- HTTP：200
+- GitHub：`https://github.com/ykf7103-rgb/lwwf-futurelite-iot-lab`
+- Live Playwright：desktop Chromium 4 tests passed；390px mobile Chromium 4 tests passed。
+- Live MQTT：Broker self-test、status、Soil raw、A 鍵事件、matching ACK、6 秒離線及手動斷線／重連通過。
+- Live console／page error：0。
+- Live horizontal overflow：0。

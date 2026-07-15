@@ -2,6 +2,9 @@
 
 供 FutureLite AI、Sugar Soil Moisture（Port1／P1）及 Sugar LED（Port2／P2）進行短期 PoC 的瀏覽器測試台。
 
+- 正式網站：<https://lwwf-futurelite-iot-lab.pages.dev/>
+- GitHub：<https://github.com/ykf7103-rgb/lwwf-futurelite-iot-lab>
+
 ## 啟動
 
 ```powershell
