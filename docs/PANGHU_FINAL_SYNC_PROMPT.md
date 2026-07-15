@@ -1,11 +1,11 @@
-# 伴虎最終同步提示（r3 短 Topic 修正版）
+# 伴虎最終同步提示（r5 USB 實機驗證版）
 
-把以下整段直接貼到 FutureLite 伴虎。這次只修正目前已在運行的程式，不讓 AI 重新設計整個程式。
+目前主板已經由 Codex 經 USB 直接修正及實機驗收；只有日後板端檔案被覆蓋或需要還原時，才把以下整段貼到 FutureLite 伴虎。
 
 ```text
 請打開板上目前正在運行、畫面顯示 LIVE MONITOR 的 Python 程式，先讀取完整原始碼，再作「最小局部修正」。
 
-重要：不要重寫整個程式，不要建立另一個版本，不要改動已成功的 Wi-Fi、MQTT 連線、P1 Soil、P2 LED、M2 風扇、A/B/M 按鍵或屏幕功能。只修改 MQTT topic 常數、兩次 publish 的間隔及 topic 長度檢查。
+重要：不要重寫整個程式，不要建立另一個版本，不要改動已成功的 Wi-Fi、MQTT 連線、P1 Soil、P2 LED、M2 風扇、A/B/M 按鍵或屏幕功能。只修改 MQTT topic 常數、輪流發布排程及 topic 長度檢查。
 
 外部 Broker 已實測：
 - 32 字元的 hksteam/demo/fla-7q4m9c2p/status 可以成功發布。
@@ -33,12 +33,13 @@ hksteam/demo/fla-7q4m9c2p
 2. mqttConnect 成功但回傳 None 是正常；只以有沒有 Exception 判斷。
 3. 連線後執行 wifi.subscribe(TOPIC_LED_COMMAND)。
 4. 永久主迴圈非阻塞執行 wifi.getMessage(TOPIC_LED_COMMAND)。
-5. 每約兩秒 publish status，然後 time.sleep(0.15)，再 publish soil。
+5. 每秒只 publish 一則訊息：status 與 soil 輪流發布；不可在同一次函數內緊接發布兩則訊息。
 6. Soil payload：{"raw":P1實際整數值,"seq":遞增整數}。
 7. A/B payload：{"button":"A或B","seq":遞增整數}。
 8. 收到 LED payload：{"id":"...","on":true或false} 後，實際控制 P2。
 9. 完成後 publish ACK：{"id":"原本相同id","ok":true,"on":實際狀態}。
 10. Wi-Fi／MQTT 重連後必須重新 subscribe。
+11. 設定 PROGRAM_VERSION = "2026.07.15-r5-usb-verified"，並在 status 加入 "ver": PROGRAM_VERSION。
 
 在 mqttConnect 成功後加入以下靜態檢查；任何板端 topic 超過 32 字元便停止並清楚報錯：
 
@@ -61,6 +62,7 @@ for topic in (TOPIC_STATUS, TOPIC_SOIL, TOPIC_BUTTON, TOPIC_LED_COMMAND, TOPIC_A
 - subscribe(TOPIC_LED_COMMAND)
 - getMessage(TOPIC_LED_COMMAND)
 - publish(TOPIC_ACK, ...)
+- 每秒 status／soil 輪流發布，沒有 150ms 連發
 - 所有板端 topic 長度不超過 32
 - ACK 使用收到的相同 command id
 - 永久 while 迴圈

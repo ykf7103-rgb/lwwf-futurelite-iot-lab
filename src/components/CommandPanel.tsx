@@ -19,7 +19,7 @@ const formatTime = (time?: number) =>
     : '—'
 
 const statusText = (command: CommandState) => {
-  if (command.status === 'waiting') return '等待硬件確認'
+  if (command.status === 'waiting') return '等待硬件確認 · 正在自動重試'
   if (command.status === 'acknowledged') return '硬件已確認'
   if (command.status === 'failed') return `失敗：${command.error ?? '硬件回報錯誤'}`
   if (command.status === 'timeout') return '逾時：沒有收到 matching ACK'
@@ -108,7 +108,7 @@ export function CommandPanel({ brokerStatus, deviceOnline, command, onSend }: Co
       </dl>
       <p className="panel-note">
         {deviceOnline
-          ? '只有實體 LED 改變並回傳相同 command ID 的 ACK，才算完成。'
+          ? '網站會以同一個 command ID 每秒自動重試，最多 5 秒；只有實體 LED 改變並回傳 matching ACK 才算完成。'
           : '按鈕會在主板在線後啟用，避免把「成功發布」誤當成硬件已執行。'}
       </p>
     </section>

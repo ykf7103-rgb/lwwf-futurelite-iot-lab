@@ -30,6 +30,7 @@ npm run qa:visual
 - Retain：false
 - FutureLite 離線判斷：6 秒
 - ACK 逾時：5 秒
+- LED 指令重試：每 1 秒以同一 command ID 重發，直至收到 ACK 或達 5 秒上限
 
 ### FutureLite 短 Topic 合約
 
@@ -47,9 +48,9 @@ npm run qa:visual
 
 1. 等候「MQTT Broker」顯示已連線。
 2. 按「Broker 自我測試」，確認網站收到自己的 self-test，而 FutureLite 仍顯示離線。
-3. 在 FutureLite AI 執行 `03_futurelite_full_console.py`；參考版本位於 `device/`，伴虎同步提示位於 `docs/PANGHU_FINAL_SYNC_PROMPT.md`。
+3. 在 FutureLite AI 執行 `03_futurelite_full_console.py`；已透過 USB 實機驗證的正式版本位於 `device/`，伴虎同步提示位於 `docs/PANGHU_FINAL_SYNC_PROMPT.md`。
 4. 確認短 topic `soil` 的 raw 每約 2 秒更新，短 topic `btn` 的 A／B 事件計數正確。
-5. 發送 LED 開／關指令，以實體 LED 改變及相同 command ID 的 ACK 作唯一成功標準。
+5. 發送 LED 開／關指令；網站會自動重試，以實體 LED 改變及相同 command ID 的 ACK 作唯一成功標準。
 
 網站的通道診斷會分開顯示 status、Soil、A／B event 及 LED ACK；「FutureLite 在線」只代表最近收到板端訊息，不等於所有通道已完成。
 

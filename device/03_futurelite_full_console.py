@@ -30,12 +30,12 @@ TOPIC_BUTTON = PREFIX + "/btn"
 TOPIC_LED_COMMAND = PREFIX + "/led"
 TOPIC_ACK = PREFIX + "/ack"
 
-PUBLISH_INTERVAL = 2.0
+PUBLISH_INTERVAL = 1.0
 DISPLAY_INTERVAL = 0.35
 DEBOUNCE_SECONDS = 0.25
 RETRY_SECONDS = 3
 FAN_SPEED = 50
-PROGRAM_VERSION = "2026.07.15-r3-short-topic"
+PROGRAM_VERSION = "2026.07.15-r5-usb-verified"
 
 BLACK = (0, 0, 0)
 WHITE = (245, 250, 255)
@@ -71,6 +71,7 @@ button_b_count = 0
 tx_count = 0
 rx_count = 0
 reconnect_count = 0
+publish_phase = 0
 
 wifi_ok = False
 dns_ok = False
@@ -350,14 +351,23 @@ def render():
 
 
 def publish_live_data():
-    publish_json(TOPIC_STATUS, {"online": True, "seq": next_seq()})
-    # The board uwifi transport is more reliable when two publishes are not
-    # issued in the same instant.
-    time.sleep(0.15)
+    global publish_phase
+    # The board uwifi transport can drop the second of two immediate QoS 0
+    # publishes. Alternate one message per second, so status and Soil each
+    # arrive about every two seconds.
+    if publish_phase == 0:
+        publish_json(
+            TOPIC_STATUS,
+            {"online": True, "seq": next_seq(), "ver": PROGRAM_VERSION},
+        )
+        publish_phase = 1
+        return
+
     if soil_raw is None:
         read_soil()
     if soil_raw is not None:
         publish_json(TOPIC_SOIL, {"raw": soil_raw, "seq": next_seq()})
+    publish_phase = 0
 
 
 def safe_stop():

@@ -31,19 +31,25 @@
 
 ## 界線
 
-自動 MQTT harness 已用短 topic 驗證網站與公開 Broker 的完整訊息合約。實體 FutureLite 現場監聽已證實心跳正常，但 Soil 及 LED ACK 尚待伴虎把板端改成短 topic 後再驗收。
+自動 MQTT harness 已用短 topic 驗證網站與公開 Broker 的完整訊息合約。其後已透過 USB 直接修正及重新啟動實體 FutureLite，Soil 與 LED matching ACK 均已完成現場驗收。
 
-## 待執行
+## 實體 FutureLite USB 驗收
 
-- 在伴虎按 `PANGHU_FINAL_SYNC_PROMPT.md` 只修改現有程式的 topic 常數，Stop 後重新 Run。
-- 確認網站收到 P1 raw、A／B 各一次，以及連續 10 組 LED 開／關 matching ACK。
-- M2 只以 B 鍵本機測試，網站不提供風扇／馬達控制。
+- USB：ESP32 `VID_303A PID_4002`，序列埠 `COM4`，USB 磁碟 `E:`。
+- 已建立板內修正前備份，正式程式為 `03_futurelite_full_console.py`；Wi-Fi 密碼檔內容沒有被讀取或寫入紀錄。
+- 運行版本：`USB-R5`；status 與 Soil 改為每秒輪流發布一則，每個通道約兩秒更新一次。
+- 實測心跳：seq 221、223、225，全部含 `ver: USB-R5`。
+- 實測 Soil：seq 222 raw 3588；seq 224 raw 3625。
+- LED 開：同 ID 自動重發第 2 次後收到 `ok: true, on: true` ACK。
+- LED 關：同 ID 自動重發第 2 次後收到 `ok: true, on: false` ACK；測試結束保持關閉。
+- M2 只以 B 鍵本機控制，網站不提供風扇／馬達控制。
 
 ## 2026-07-15 短 Topic 回歸測試
 
 - `npm run qa`：通過；lint、typecheck、10 unit tests、production build 全部成功。
 - `npm run qa:visual`：desktop Chromium 4 tests、390px mobile Chromium 4 tests，合共 8 passed。
 - 真實公開 Broker harness：短 `soil`、`btn`、`led`、`ack` 全流程成功。
+- QoS 0 漏訊息回歸：harness 故意忽略首個 LED 指令；網站在 1 秒後以相同 command ID 重發並成功收到 ACK。
 - UI：桌面及手機沒有 console error、page error、橫向溢出或文字重疊。
 
 ## 正式部署驗證

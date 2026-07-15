@@ -15,6 +15,7 @@ import type {
 
 const DEVICE_OFFLINE_MS = 6_000
 const COMMAND_TIMEOUT_MS = 5_000
+const COMMAND_RETRY_MS = 1_000
 const SELFTEST_TIMEOUT_MS = 5_000
 const MAX_LOGS = 300
 
@@ -61,6 +62,7 @@ export const useFutureLiteMqtt = () => {
   const commandRef = useRef<CommandState>({ status: 'idle' })
   const selfTestRef = useRef<SelfTestState>({ status: 'idle' })
   const commandTimerRef = useRef<number | undefined>(undefined)
+  const commandRetryTimerRef = useRef<number | undefined>(undefined)
   const selfTestTimerRef = useRef<number | undefined>(undefined)
   const seenButtonEventsRef = useRef(new Set<string>())
 
@@ -152,6 +154,7 @@ export const useFutureLiteMqtt = () => {
           const waiting = commandRef.current
           if (waiting.status !== 'waiting') return
           window.clearTimeout(commandTimerRef.current)
+          window.clearInterval(commandRetryTimerRef.current)
           const ackAt = Date.now()
           updateCommand({
             status: message.value.ok ? 'acknowledged' : 'failed',
@@ -196,6 +199,7 @@ export const useFutureLiteMqtt = () => {
     return () => {
       window.clearInterval(offlineTimer)
       window.clearTimeout(commandTimerRef.current)
+      window.clearInterval(commandRetryTimerRef.current)
       window.clearTimeout(selfTestTimerRef.current)
       service.destroy()
       serviceRef.current = undefined
@@ -209,6 +213,7 @@ export const useFutureLiteMqtt = () => {
       const next: CommandState = { status: 'waiting', id, on, sentAt }
       updateCommand(next)
       window.clearTimeout(commandTimerRef.current)
+      window.clearInterval(commandRetryTimerRef.current)
       const sent = serviceRef.current?.publishJson(topics.ledCommand, { id, on }) ?? false
       if (!sent) {
         updateCommand({
@@ -223,9 +228,18 @@ export const useFutureLiteMqtt = () => {
         })
         return
       }
+      commandRetryTimerRef.current = window.setInterval(() => {
+        const current = commandRef.current
+        if (current.status !== 'waiting' || current.id !== id) {
+          window.clearInterval(commandRetryTimerRef.current)
+          return
+        }
+        serviceRef.current?.publishJson(topics.ledCommand, { id, on })
+      }, COMMAND_RETRY_MS)
       commandTimerRef.current = window.setTimeout(() => {
         const current = commandRef.current
         if (current.status === 'waiting' && current.id === id) {
+          window.clearInterval(commandRetryTimerRef.current)
           updateCommand({ status: 'timeout', id, on, sentAt })
         }
       }, COMMAND_TIMEOUT_MS)

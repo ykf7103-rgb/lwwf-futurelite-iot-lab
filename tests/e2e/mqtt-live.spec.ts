@@ -37,6 +37,7 @@ test('公開 Broker self-test 只驗證瀏覽器', async ({ page }) => {
 
 test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ page }) => {
   const harness = await connectHarness()
+  const receivedCommands: Array<{ id: string; on: boolean }> = []
   try {
     await new Promise<void>((resolve, reject) => {
       harness.subscribe(`${prefix}/led`, { qos: 0 }, (error) => (error ? reject(error) : resolve()))
@@ -44,6 +45,9 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
     harness.on('message', (topic, payload) => {
       if (topic !== `${prefix}/led`) return
       const command = JSON.parse(payload.toString()) as { id: string; on: boolean }
+      receivedCommands.push(command)
+      // 故意忽略第一個 QoS 0 指令，驗證網站會以相同 command ID 自動重試。
+      if (receivedCommands.length === 1) return
       harness.publish(
         `${prefix}/ack`,
         JSON.stringify({ id: command.id, ok: true, on: command.on }),
@@ -77,6 +81,8 @@ test('telemetry、按鍵與 matching ACK 完成真實 MQTT 流程', async ({ pag
 
     await page.getByRole('button', { name: 'LED 開' }).click()
     await expect(page.getByTestId('command-status')).toContainText('硬件已確認', { timeout: 10_000 })
+    expect(receivedCommands.length).toBeGreaterThanOrEqual(2)
+    expect(new Set(receivedCommands.map(({ id }) => id)).size).toBe(1)
 
     await expect(page.getByTestId('diagnostic-summary')).toContainText('即時通道已建立')
   } finally {

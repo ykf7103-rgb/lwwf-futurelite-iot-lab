@@ -40,6 +40,10 @@
 - 2026-07-15：板端參考程式升級為 `2026.07.15-r3-short-topic`，加入 topic 長度閘門及 status／soil 之間 150ms 發布間隔；伴虎提示改為只作最小局部修正，避免再次重寫整個程式。
 - 2026-07-15：短 topic 版本 `npm run qa` 通過；3 個 Vitest 檔案共 10 tests passed；`npm run qa:visual` desktop／390px mobile 共 8 tests passed。
 - 2026-07-15：Cloudflare Pages production deployment `42da41bc-32b9-4478-8945-f106b6a61651` 完成，來源 commit `d716b23`；正式網址短 topic 版本 desktop／390px mobile 共 8 tests passed。
+- 2026-07-15：USB 實機識別成功：FutureLite ESP32 同時掛載為 `COM4` 及 `E:`；已直接讀取、備份及修正板內 `03_futurelite_full_console.py`，沒有讀取或記錄 Wi-Fi 密碼檔內容。
+- 2026-07-15：實機根因確認為 `getMessage()` 缺少指定 `led` topic，以及 status／Soil 緊接發布時第二則 QoS 0 訊息容易遺失；板內現正執行 `USB-R5`，改為每秒輪流發布一則 status 或 Soil。
+- 2026-07-15：公開 Broker 實機驗收成功：連續收到 `USB-R5` status seq 221／223／225、Soil raw 3588／3625，LED 開及 LED 關均在相同 command ID 第二次發送時收到 matching ACK，最後狀態為 LED 關。
+- 2026-07-15：網站加入同 command ID 每秒自動重試、5 秒 ACK 上限；本機 `npm run qa` 通過 10 tests，`npm run qa:visual` desktop／390px mobile 共 8 tests passed，測試會刻意忽略首個 LED 指令以驗證重試。
 
 ## 部署前閘門
 
@@ -49,10 +53,10 @@
 - 正式網址桌面及 390px 手機檢查
 - Broker self-test（外部網絡容許時）
 
-## 現場待完成項目
+## 現場完成狀態
 
-網站及新版短 topic MQTT 合約已自動驗收。現場主板仍須在伴虎把目前正在運行的程式作最小局部修正，然後 Stop 舊程式並重新 Run；在主板 `RX` 增加、實體 LED 改變及網站收到同 ID ACK 前，尚未聲稱現場雙向控制完成。
+USB 主板與公開 Broker 的 Soil 上傳、LED 開、LED 關及 matching ACK 已完成實機驗收。板內保留修正前備份；M2 風扇繼續只由實體 B 鍵本機控制，不經公開網站遙控。
 
 ## 下一步
 
-把 `docs/PANGHU_FINAL_SYNC_PROMPT.md` 直接貼到伴虎，只修改現有程式的 topic 常數。REPL 必須列出 status 32、soil 30、btn 29、led 29、ack 29；重新 Run 後網站須收到 `soil`，網站 LED 指令則要令主板 `RX` 增加並回傳同 ID ACK。
+維持 FutureLite 連接 Wi-Fi 及持續執行板內 `03_futurelite_full_console.py`；網站重新整理後即可查看 Soil raw、A／B 事件及 LED matching ACK。若板端程式日後被伴虎重新產生，應以 `device/03_futurelite_full_console.py` 的 USB 實機驗證版本為準，不再覆蓋成舊版。
