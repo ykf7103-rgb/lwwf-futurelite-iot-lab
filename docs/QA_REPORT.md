@@ -39,7 +39,7 @@
 ## 正式部署驗證
 
 - 正式網址：`https://lwwf-futurelite-iot-lab.pages.dev/`
-- Cloudflare deployment：`74b78748-3a4f-4b49-904c-54c6c4d506f4`
+- Cloudflare deployment：`1d5084f5-d2c6-420a-9ced-17adc1d051f1`
 - HTTP：200
 - GitHub：`https://github.com/ykf7103-rgb/lwwf-futurelite-iot-lab`
 - Live Playwright：desktop Chromium 4 tests passed；390px mobile Chromium 4 tests passed。
@@ -48,3 +48,4 @@
 - Live horizontal overflow：0。
 - 2026-07-15 新版 live Playwright：desktop／390px mobile 共 8 tests passed；四通道診斷、Soil raw、A 事件、LED matching ACK、自我測試及斷線重連全部通過。
 - 第二輪介面本機 Playwright：desktop／390px mobile 8 tests passed；兩端同步入口、Soil raw 量尺及 LED 重試沒有 overflow、console error、page error 或文字重疊。
+- 第二輪正式網址 Playwright：desktop／390px mobile 8 tests passed；telemetry、A 事件、LED matching ACK、自我測試、斷線重連、外部程式連結及 Soil 量尺全部通過。
