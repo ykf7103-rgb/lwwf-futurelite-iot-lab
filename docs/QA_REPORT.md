@@ -45,3 +45,4 @@
 - Live MQTT：Broker self-test、status、Soil raw、A 鍵事件、matching ACK、6 秒離線及手動斷線／重連通過。
 - Live console／page error：0。
 - Live horizontal overflow：0。
+- 2026-07-15 新版 live Playwright：desktop／390px mobile 共 8 tests passed；四通道診斷、Soil raw、A 事件、LED matching ACK、自我測試及斷線重連全部通過。
