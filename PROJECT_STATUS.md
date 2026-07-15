@@ -28,7 +28,7 @@
 - 2026-07-15：新增 `device/03_futurelite_full_console.py` 參考程式及 `docs/PANGHU_FINAL_SYNC_PROMPT.md`，統一 P1 Soil、P2 LED、M2 本機風扇與 MQTT 合約。
 - 2026-07-15：`npm run qa` 通過；Vitest 8 tests passed；`npm run qa:visual` 桌面及 390px 手機 8 tests passed，沒有 console error、page error、橫向溢出或文字重疊。
 - 2026-07-15：本機 Playwright 改用獨立 QA topic，避免現場主板及桌面／手機並行測試互相污染。
-- 2026-07-15：Cloudflare Pages production deployment `e6efa9c4-44cc-41a2-9c35-8ef3622d131f` 完成，正式網址已更新。
+- 2026-07-15：Cloudflare Pages production deployment `74b78748-3a4f-4b49-904c-54c6c4d506f4` 完成，來源 commit `3f77c13`，正式網址已更新。
 
 ## 部署前閘門
 

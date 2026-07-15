@@ -38,7 +38,7 @@
 ## 正式部署驗證
 
 - 正式網址：`https://lwwf-futurelite-iot-lab.pages.dev/`
-- Cloudflare deployment：`e6efa9c4-44cc-41a2-9c35-8ef3622d131f`
+- Cloudflare deployment：`74b78748-3a4f-4b49-904c-54c6c4d506f4`
 - HTTP：200
 - GitHub：`https://github.com/ykf7103-rgb/lwwf-futurelite-iot-lab`
 - Live Playwright：desktop Chromium 4 tests passed；390px mobile Chromium 4 tests passed。
